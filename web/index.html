@@ -196,9 +196,10 @@ async function disconnect() {
 
 async function toggleIdle() {
   if (!writer) return;
-  idleState = !idleState;
-  const cmd = idleState ? 'IDLE:1\n' : 'IDLE:0\n';
+  const nextIdleState = !idleState;
+  const cmd = nextIdleState ? 'IDLE:1\n' : 'IDLE:0\n';
   await writer.write(new TextEncoder().encode(cmd));
+  idleState = nextIdleState;
 }
 
 document.getElementById('connectBtn').onclick = () => connect().catch(err => statusEl.textContent = `Connect error: ${err.message}`);

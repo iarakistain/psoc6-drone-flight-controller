@@ -175,6 +175,9 @@ uint32_t lastLoopUs = 0;
 uint32_t lastFusionUs = 0;
 uint32_t lastDriftReportMs = 0;
 Vec3 gyroBiasDps {0.0f, 0.0f, 0.0f};
+bool hasBaroSample = false;
+float lastBaroPressurePa = 0.0f;
+float lastBaroTemperatureC = 0.0f;
 
 String serialLine;
 
@@ -289,7 +292,8 @@ static bool initializeSensors() {
   }
 
   char sensorInfo[64];
-  snprintf(sensorInfo, sizeof(sensorInfo), "Sensor check BMI addr=0x%02X BMM chip=0x%02X", BMI2_I2C_PRIM_ADDR, mag.getChipID());
+  snprintf(sensorInfo, sizeof(sensorInfo), "Sensor check BMI addr=0x%02X BMM chip=0x%02X",
+           static_cast<unsigned int>(BMI2_I2C_PRIM_ADDR), static_cast<unsigned int>(mag.getChipID()));
   printStatus("info", sensorInfo);
   printStatus("info", "All sensors initialized");
   return true;
@@ -322,14 +326,17 @@ static bool readSensors(SensorSample& out) {
   uint8_t pressureCount = 4;
   const int16_t dpsStatus = baro.getContResults(temperatureBuf, temperatureCount, pressureBuf, pressureCount);
   if (dpsStatus == 0 && temperatureCount > 0 && pressureCount > 0) {
-    out.temperatureC = temperatureBuf[temperatureCount - 1];
-    out.pressurePa = pressureBuf[pressureCount - 1];
-  } else if (baro.measureTempOnce(out.temperatureC) != 0 || baro.measurePressureOnce(out.pressurePa) != 0) {
+    lastBaroTemperatureC = temperatureBuf[temperatureCount - 1];
+    lastBaroPressurePa = pressureBuf[pressureCount - 1];
+    hasBaroSample = true;
+  } else if (!hasBaroSample) {
     if (debugEnabled) {
-      printStatus("warning", "DPS368 read failed");
+      printStatus("warning", "DPS368 waiting for first sample");
     }
     return false;
   }
+  out.temperatureC = lastBaroTemperatureC;
+  out.pressurePa = lastBaroPressurePa;
 
   out.altitudeM = computeAltitudeMeters(out.pressurePa, out.temperatureC);
   return true;
