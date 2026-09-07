@@ -98,8 +98,17 @@ const deviceToSceneQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Eu
 const deviceToSceneInverse = deviceToSceneQuaternion.clone().invert();
 const targetModelQuaternion = new THREE.Quaternion();
 const droneRoot = new THREE.Group();
+const yawAxis = new THREE.Vector3(0, 0, 1);
+const pitchAxis = new THREE.Vector3(1, 0, 0);
+const rollAxis = new THREE.Vector3(0, 1, 0);
+const yawQuaternion = new THREE.Quaternion();
+const pitchQuaternion = new THREE.Quaternion();
+const rollQuaternion = new THREE.Quaternion();
+const eulerFallbackQuaternion = new THREE.Quaternion();
 let scene, camera, renderer;
 let animationMixer;
+let animationFrameId = 0;
+let viewerDisposed = false;
 targetModelQuaternion.identity();
 
 function initViewer() {
@@ -170,21 +179,12 @@ function setViewerStatus(text = '') {
 
 function setAttitudeFromEulerDegrees(rollDeg, pitchDeg, yawDeg) {
   if (![rollDeg, pitchDeg, yawDeg].every(Number.isFinite)) return false;
-  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 0, 1),
-    THREE.MathUtils.degToRad(yawDeg)
-  );
-  const pitchQuaternion = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(1, 0, 0),
-    THREE.MathUtils.degToRad(pitchDeg)
-  );
-  const rollQuaternion = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    THREE.MathUtils.degToRad(rollDeg)
-  );
+  yawQuaternion.setFromAxisAngle(yawAxis, THREE.MathUtils.degToRad(yawDeg));
+  pitchQuaternion.setFromAxisAngle(pitchAxis, THREE.MathUtils.degToRad(pitchDeg));
+  rollQuaternion.setFromAxisAngle(rollAxis, THREE.MathUtils.degToRad(rollDeg));
   // Preserve the original CSS fallback order: rotateZ(yaw) rotateX(pitch) rotateY(roll).
-  const deviceQuaternion = yawQuaternion.multiply(pitchQuaternion).multiply(rollQuaternion);
-  targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(deviceQuaternion).multiply(deviceToSceneInverse);
+  eulerFallbackQuaternion.copy(yawQuaternion).multiply(pitchQuaternion).multiply(rollQuaternion);
+  targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(eulerFallbackQuaternion).multiply(deviceToSceneInverse);
   return true;
 }
 
@@ -200,7 +200,8 @@ function setAttitudeFromPacket(data) {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
+  if (viewerDisposed) return;
+  animationFrameId = requestAnimationFrame(animate);
   resizeViewer();
   const deltaSeconds = Math.min(clock.getDelta(), 0.25);
   if (animationMixer) {
@@ -213,7 +214,22 @@ function animate() {
   }
 }
 
+function cleanupViewer() {
+  viewerDisposed = true;
+  window.removeEventListener('resize', resizeViewer);
+  window.removeEventListener('pagehide', cleanupViewer);
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+  }
+  if (renderer) {
+    renderer.dispose();
+    renderer = undefined;
+  }
+}
+
 window.addEventListener('resize', resizeViewer);
+window.addEventListener('pagehide', cleanupViewer);
 initViewer();
 resizeViewer();
 animate();
