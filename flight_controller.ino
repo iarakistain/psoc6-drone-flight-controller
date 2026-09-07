@@ -170,6 +170,7 @@ bool debugEnabled = true;
 bool lowPowerIdle = false;
 bool sensorHealthy = true;
 uint32_t lastLoopUs = 0;
+uint32_t lastFusionUs = 0;
 uint32_t lastDriftReportMs = 0;
 Vec3 gyroBiasDps {0.0f, 0.0f, 0.0f};
 
@@ -192,8 +193,10 @@ static float computeAltitudeMeters(float pressurePa, float temperatureC) {
   if (pressurePa <= 0.0f) {
     return NAN;
   }
-  const float tempK = temperatureC + 273.15f;
-  return ((powf(SEA_LEVEL_PRESSURE_PA / pressurePa, 1.0f / 5.257f) - 1.0f) * tempK) / 0.0065f;
+  const float baseAltitude = 44330.0f * (1.0f - powf(pressurePa / SEA_LEVEL_PRESSURE_PA, 0.19029495f));
+  const float measuredTempK = temperatureC + 273.15f;
+  const float isaTempK = fmaxf(200.0f, 288.15f - 0.0065f * baseAltitude);
+  return baseAltitude * (measuredTempK / isaTempK);
 }
 
 static void quaternionToEuler(const Quaternion& q, Vec3& euler) {
@@ -250,7 +253,6 @@ static bool initializeSensors() {
     printStatus("error", "BMM350 init failed");
     return false;
   }
-  mag.setCalibration(MAG_HARD_IRON, MAG_SOFT_IRON);
 
   baro.begin(Wire);
   int16_t baroInit = baro.startMeasureBothCont(5, 2, 5, 2);
@@ -392,6 +394,7 @@ void setup() {
   printStatus("info", "Booting flight controller");
   sensorHealthy = initializeSensors();
   lastLoopUs = micros();
+  lastFusionUs = lastLoopUs;
 }
 
 void loop() {
@@ -406,7 +409,6 @@ void loop() {
   if (nowUs - lastLoopUs < LOOP_PERIOD_US) {
     return;
   }
-  const float dt = (nowUs - lastLoopUs) * 1e-6f;
   lastLoopUs = nowUs;
 
   if (!sensorHealthy) {
@@ -426,6 +428,8 @@ void loop() {
   }
 
   detectDrift(sample);
+  const float dt = (nowUs - lastFusionUs) * 1e-6f;
+  lastFusionUs = nowUs;
 
   ahrs.update(
       radians(sample.gyroDps.x), radians(sample.gyroDps.y), radians(sample.gyroDps.z),

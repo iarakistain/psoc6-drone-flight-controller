@@ -46,6 +46,7 @@
     <button id="disconnectBtn" disabled>Disconnect</button>
     <button id="idleBtn">Toggle Idle</button>
     <span id="status">Disconnected</span>
+    <span id="deviceStatus" style="margin-left:12px;color:#9ad;">Device: waiting</span>
   </div>
 
   <div class="row" style="margin-top:12px;">
@@ -79,6 +80,7 @@
 let port, reader, writer, keepReading = false, idleState = false;
 let decoder, pipeAbortController, pipePromise;
 const statusEl = document.getElementById('status');
+const deviceStatusEl = document.getElementById('deviceStatus');
 const cube = document.getElementById('cube');
 const needle = document.getElementById('needle');
 const headingEl = document.getElementById('heading');
@@ -87,6 +89,7 @@ const telemetryText = document.getElementById('telemetryText');
 const canvas = document.getElementById('altGraph');
 const ctx = canvas.getContext('2d');
 const altHistory = [];
+let parseErrors = 0;
 
 function drawAltitudeGraph() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -125,7 +128,7 @@ function updateUI(packet) {
   }
 
   if (packet.type === 'status') {
-    statusEl.textContent = `${packet.data.level}: ${packet.data.message}`;
+    deviceStatusEl.textContent = `Device: ${packet.data.level}: ${packet.data.message}`;
   }
 }
 
@@ -164,7 +167,10 @@ async function connect() {
       try {
         const packet = JSON.parse(line);
         updateUI(packet);
-      } catch (_) {}
+      } catch (_) {
+        parseErrors += 1;
+        deviceStatusEl.textContent = `Device: telemetry parse errors=${parseErrors}`;
+      }
     }
   }
 }
