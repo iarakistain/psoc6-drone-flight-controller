@@ -44,7 +44,7 @@
   <div class="card">
     <button id="connectBtn">Connect</button>
     <button id="disconnectBtn" disabled>Disconnect</button>
-    <button id="idleBtn">Toggle Idle</button>
+    <button id="idleBtn" aria-pressed="false">Enable Idle</button>
     <span id="status" role="status" aria-live="polite">Disconnected</span>
     <span id="deviceStatus" style="margin-left:12px;color:#9ad;">Device: waiting</span>
   </div>
@@ -86,6 +86,7 @@ const needle = document.getElementById('needle');
 const headingEl = document.getElementById('heading');
 const altitudeEl = document.getElementById('altitude');
 const telemetryText = document.getElementById('telemetryText');
+const idleBtn = document.getElementById('idleBtn');
 const canvas = document.getElementById('altGraph');
 const ctx = canvas.getContext('2d');
 const altHistory = [];
@@ -200,6 +201,8 @@ async function toggleIdle() {
   const cmd = nextIdleState ? 'IDLE:1\n' : 'IDLE:0\n';
   await writer.write(new TextEncoder().encode(cmd));
   idleState = nextIdleState;
+  idleBtn.textContent = idleState ? 'Disable Idle' : 'Enable Idle';
+  idleBtn.setAttribute('aria-pressed', idleState ? 'true' : 'false');
 }
 
 document.getElementById('connectBtn').addEventListener('click', () => connect().catch(err => {
@@ -207,7 +210,7 @@ document.getElementById('connectBtn').addEventListener('click', () => connect().
   deviceStatusEl.textContent = 'Device: disconnected';
 }));
 document.getElementById('disconnectBtn').addEventListener('click', () => disconnect().catch(() => {}));
-document.getElementById('idleBtn').addEventListener('click', () => toggleIdle().catch(() => {}));
+idleBtn.addEventListener('click', () => toggleIdle().catch(() => {}));
 </script>
 </body>
 </html>

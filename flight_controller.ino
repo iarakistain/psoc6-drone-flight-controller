@@ -347,19 +347,29 @@ static bool readSensors(SensorSample& out) {
   return true;
 }
 
-static void setLowPowerIdle(bool enable) {
-  lowPowerIdle = enable;
-  imu.enableAdvancedPowerSave(enable);
-  mag.setPowerMode(enable ? BMM350_SUSPEND_MODE : BMM350_NORMAL_MODE);
+static bool setLowPowerIdle(bool enable) {
+  bool success = true;
+  if (imu.enableAdvancedPowerSave(enable) != BMI2_OK) {
+    success = false;
+  }
+  if (!mag.setPowerMode(enable ? BMM350_SUSPEND_MODE : BMM350_NORMAL_MODE)) {
+    success = false;
+  }
   if (enable) {
-    baro.standby();
+    if (baro.standby() != 0) {
+      success = false;
+    }
   } else {
     hasBaroSample = false;
     const int16_t ret = baro.startMeasureBothCont(7, 0, 7, 0);
     if (ret != 0) {
-      printStatus("warning", "DPS368 resume to continuous mode failed");
+      success = false;
     }
   }
+  if (success) {
+    lowPowerIdle = enable;
+  }
+  return success;
 }
 
 static void detectDrift(const SensorSample& s) {
@@ -382,11 +392,17 @@ static void processSerialCommands() {
     const char ch = static_cast<char>(Serial.read());
     if (ch == '\n' || ch == '\r') {
       if (serialLine == "IDLE:1") {
-        setLowPowerIdle(true);
-        printStatus("info", "Entered low power idle mode");
+        if (setLowPowerIdle(true)) {
+          printStatus("info", "Entered low power idle mode");
+        } else {
+          printStatus("warning", "Low power idle transition failed");
+        }
       } else if (serialLine == "IDLE:0") {
-        setLowPowerIdle(false);
-        printStatus("info", "Exited low power idle mode");
+        if (setLowPowerIdle(false)) {
+          printStatus("info", "Exited low power idle mode");
+        } else {
+          printStatus("warning", "Low power resume transition failed");
+        }
       } else if (serialLine == "DEBUG:1") {
         debugEnabled = true;
         printStatus("info", "Debug enabled");

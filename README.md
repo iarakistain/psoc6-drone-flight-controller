@@ -12,6 +12,9 @@ Install from Library Manager:
 - `BMM350` by Matteo Cancian (`BMM350-Magnetometer` repo), version `1.3.0` (header: `BMM350.h`)
 - `XENSIV Digital Pressure Sensor` by Infineon, version `1.0.3` (header: `Dps3xx.h`)
 
+## Board package
+Install the Infineon PSoC 6 Arduino board package that includes `CY8CKIT-062S2-AI` in Arduino IDE Boards Manager before compiling `flight_controller.ino`.
+
 ## Serial JSON protocol
 Each line is a JSON object:
 - `{"type":"sensor","data":{...},"timestamp":ms}`
