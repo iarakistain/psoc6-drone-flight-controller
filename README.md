@@ -22,7 +22,7 @@ Each line is a JSON object:
 - `{"type":"status","data":{...},"timestamp":ms}`
 
 `sensor.data.baro` includes both `altitudeM` (standard pressure altitude) and `compensatedAltitudeM` (temperature-compensated altitude).
-`ahrs.data` includes `roll`, `pitch`, `yaw`, `heading`, and a `quaternion` object for 3D attitude visualization.
+`ahrs.data` includes `roll`, `pitch`, `yaw`, `heading`, and a `quaternion` object. Quaternion components are sent in `{w, x, y, z}` order and match the same AHRS/body-frame attitude used to derive `roll`/`pitch`/`yaw`; the web visualizer applies a fixed X-axis basis rotation to convert that attitude into its Y-up Three.js scene before rotating `animated_drone.glb`.
 
 ## Web visualizer
 `web/index.html` is still a static page. Serve the `web/` directory from any simple static HTTP server to load `animated_drone.glb` and connect over WebSerial.

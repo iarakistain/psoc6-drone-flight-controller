@@ -194,12 +194,12 @@ function setAttitudeFromPacket(data) {
 function animate() {
   requestAnimationFrame(animate);
   resizeViewer();
+  const deltaSeconds = Math.min(clock.getDelta(), 0.25);
   if (animationMixer) {
-    animationMixer.update(clock.getDelta());
-  } else {
-    clock.getDelta();
+    animationMixer.update(deltaSeconds);
   }
-  droneRoot.quaternion.slerp(targetModelQuaternion, 0.18);
+  const smoothing = 1 - Math.exp(-12 * deltaSeconds);
+  droneRoot.quaternion.slerp(targetModelQuaternion, smoothing);
   if (renderer && scene && camera) {
     renderer.render(scene, camera);
   }
