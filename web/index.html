@@ -309,13 +309,13 @@ function updateUI(packet) {
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = yaw;
         updateDroneTransform();
+        attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
       } else {
         targetOrientation.roll = roll;
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = unwrapAngleDegrees(renderedOrientation.yaw, yaw);
         scheduleDroneAnimation();
       }
-      attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
     }
     if (Number.isFinite(heading)) {
       needle.style.transform = `rotate(${heading}deg)`;
