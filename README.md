@@ -22,6 +22,10 @@ Each line is a JSON object:
 - `{"type":"status","data":{...},"timestamp":ms}`
 
 `sensor.data.baro` includes both `altitudeM` (standard pressure altitude) and `compensatedAltitudeM` (temperature-compensated altitude).
+`ahrs.data` includes `roll`, `pitch`, `yaw`, `heading`, and a `quaternion` object for 3D attitude visualization.
+
+## Web visualizer
+`web/index.html` is still a static page. Serve the `web/` directory from any simple static HTTP server to load `animated_drone.glb` and connect over WebSerial.
 
 ## Runtime commands
 Send over serial:
