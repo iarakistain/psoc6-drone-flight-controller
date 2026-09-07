@@ -9,23 +9,107 @@
     .row { display: flex; gap: 16px; flex-wrap: wrap; }
     .card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 12px; }
     #telemetry { min-width: 320px; }
-    #cubeWrap { perspective: 600px; width: 220px; height: 220px; }
-    #cube {
-      width: 140px; height: 140px; margin: 36px auto;
+    #attitudeWrap { min-width: 244px; }
+    #attitudeScene {
+      perspective: 700px;
+      width: 220px;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    #drone {
+      position: relative;
+      width: 180px;
+      height: 180px;
       transform-style: preserve-3d;
-      transition: transform 0.05s linear;
     }
-
-    .face {
-      position: absolute; width: 140px; height: 140px; border: 1px solid #5af;
-      background: rgba(40,120,255,0.15); line-height: 140px; text-align: center;
+    .drone-part {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-style: preserve-3d;
     }
-    .f1 { transform: rotateY(0deg) translateZ(70px); }
-    .f2 { transform: rotateY(180deg) translateZ(70px); }
-    .f3 { transform: rotateY(90deg) translateZ(70px); }
-    .f4 { transform: rotateY(-90deg) translateZ(70px); }
-    .f5 { transform: rotateX(90deg) translateZ(70px); }
-    .f6 { transform: rotateX(-90deg) translateZ(70px); }
+    .body {
+      width: 60px;
+      height: 34px;
+      margin-left: -30px;
+      margin-top: -17px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6fb3ff, #245cff);
+      border: 1px solid rgba(200, 225, 255, 0.65);
+      box-shadow: 0 0 16px rgba(50, 130, 255, 0.35);
+    }
+    .body-lower {
+      background: rgba(30, 66, 180, 0.95);
+      transform: translateZ(-10px);
+      box-shadow: none;
+    }
+    .nose {
+      width: 18px;
+      height: 18px;
+      margin-left: 18px;
+      margin-top: -9px;
+      border-radius: 50%;
+      background: #ff9555;
+      border: 1px solid rgba(255, 220, 200, 0.85);
+      transform: translateZ(12px);
+      box-shadow: 0 0 12px rgba(255, 149, 85, 0.45);
+    }
+    .arm {
+      width: 116px;
+      height: 8px;
+      margin-left: -58px;
+      margin-top: -4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #85b7ff, #6c9cff, #85b7ff);
+      box-shadow: 0 0 12px rgba(80, 140, 255, 0.25);
+    }
+    .arm-a { transform: rotate(45deg); }
+    .arm-b { transform: rotate(-45deg); }
+    .motor {
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      background: rgba(117, 166, 255, 0.95);
+      border: 2px solid rgba(220, 235, 255, 0.75);
+      transform: translateZ(10px);
+      box-shadow: 0 0 14px rgba(117, 166, 255, 0.25);
+    }
+    .motor::before, .motor::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 34px;
+      height: 4px;
+      margin-left: -17px;
+      margin-top: -2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .motor::after {
+      transform: rotate(90deg);
+    }
+    .m1 { margin-left: -53px; margin-top: -53px; }
+    .m2 { margin-left: 31px; margin-top: -53px; }
+    .m3 { margin-left: -53px; margin-top: 31px; }
+    .m4 { margin-left: 31px; margin-top: 31px; }
+    #attitudeState {
+      margin-top: 8px;
+      color: #9ad;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    #attitudeAxes {
+      margin-top: 4px;
+      color: #7f8da6;
+      font-size: 0.82rem;
+      text-align: center;
+    }
     #compass {
       width: 160px; height: 160px; border: 2px solid #555; border-radius: 50%;
       position: relative; margin: 8px auto;
@@ -51,12 +135,23 @@
   </div>
 
   <div class="row" style="margin-top:12px;">
-    <div class="card" id="cubeWrap">
-      <div id="cube">
-        <div class="face f1">Front</div><div class="face f2">Back</div>
-        <div class="face f3">Right</div><div class="face f4">Left</div>
-        <div class="face f5">Top</div><div class="face f6">Bottom</div>
+    <div class="card" id="attitudeWrap">
+      <h4 style="margin:4px 0">Drone Attitude</h4>
+      <div id="attitudeScene">
+        <div id="drone" role="img" aria-label="3D drone attitude model">
+          <div class="drone-part arm arm-a"></div>
+          <div class="drone-part arm arm-b"></div>
+          <div class="drone-part body"></div>
+          <div class="drone-part body body-lower"></div>
+          <div class="drone-part nose"></div>
+          <div class="drone-part motor m1"></div>
+          <div class="drone-part motor m2"></div>
+          <div class="drone-part motor m3"></div>
+          <div class="drone-part motor m4"></div>
+        </div>
       </div>
+      <div id="attitudeState" role="status" aria-live="polite">Awaiting first AHRS packet (neutral attitude)</div>
+      <div id="attitudeAxes">AHRS axes: roll about X, pitch about Y, yaw about Z</div>
     </div>
 
     <div class="card" style="min-width:190px;">
@@ -82,16 +177,21 @@ let port, reader, writer, keepReading = false, idleState = false;
 let decoder, pipeAbortController, pipePromise;
 const statusEl = document.getElementById('status');
 const deviceStatusEl = document.getElementById('deviceStatus');
-const cube = document.getElementById('cube');
+const drone = document.getElementById('drone');
 const needle = document.getElementById('needle');
 const headingEl = document.getElementById('heading');
 const altitudeEl = document.getElementById('altitude');
 const telemetryText = document.getElementById('telemetryText');
+const attitudeStateEl = document.getElementById('attitudeState');
 const idleBtn = document.getElementById('idleBtn');
 const canvas = document.getElementById('altGraph');
 const ctx = canvas.getContext('2d');
 const altHistory = [];
 let parseErrors = 0;
+let hasAhrsPacket = false;
+let droneAnimationFrame = 0;
+const renderedOrientation = { w: 1, x: 0, y: 0, z: 0 };
+const targetOrientation = { w: 1, x: 0, y: 0, z: 0 };
 
 function setIdleUi(isIdle) {
   idleState = isIdle;
@@ -104,10 +204,145 @@ function resetSessionUi() {
   parseErrors = 0;
   altHistory.length = 0;
   drawAltitudeGraph();
+  if (droneAnimationFrame) {
+    cancelAnimationFrame(droneAnimationFrame);
+    droneAnimationFrame = 0;
+  }
+  hasAhrsPacket = false;
+  setQuaternion(renderedOrientation, { w: 1, x: 0, y: 0, z: 0 });
+  setQuaternion(targetOrientation, { w: 1, x: 0, y: 0, z: 0 });
+  updateDroneTransform();
+  drone.setAttribute('aria-label', '3D drone attitude model awaiting AHRS data');
   headingEl.textContent = '0.0';
   altitudeEl.textContent = '0.00';
   telemetryText.textContent = 'Waiting for data...';
+  attitudeStateEl.textContent = 'Awaiting first AHRS packet (neutral attitude)';
   deviceStatusEl.textContent = 'Device: disconnected';
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function setQuaternion(target, source) {
+  target.w = source.w;
+  target.x = source.x;
+  target.y = source.y;
+  target.z = source.z;
+}
+
+function normalizeQuaternion(q) {
+  const magnitude = Math.hypot(q.w, q.x, q.y, q.z);
+  if (magnitude <= 1e-8) {
+    return { w: 1, x: 0, y: 0, z: 0 };
+  }
+  return { w: q.w / magnitude, x: q.x / magnitude, y: q.y / magnitude, z: q.z / magnitude };
+}
+
+function quaternionDot(a, b) {
+  return a.w * b.w + a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function quaternionDistance(a, b) {
+  return 1 - Math.abs(clamp(quaternionDot(a, b), -1, 1));
+}
+
+function quaternionFromAxisAngle(x, y, z, degrees) {
+  const halfRadians = degrees * Math.PI / 360;
+  const sinHalf = Math.sin(halfRadians);
+  return normalizeQuaternion({ w: Math.cos(halfRadians), x: x * sinHalf, y: y * sinHalf, z: z * sinHalf });
+}
+
+function multiplyQuaternions(a, b) {
+  return normalizeQuaternion({
+    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+  });
+}
+
+function quaternionFromAhrsEuler(roll, pitch, yaw) {
+  const yawRotation = quaternionFromAxisAngle(0, 0, 1, yaw);
+  const pitchRotation = quaternionFromAxisAngle(0, 1, 0, -pitch);
+  const rollRotation = quaternionFromAxisAngle(1, 0, 0, -roll);
+  return multiplyQuaternions(multiplyQuaternions(yawRotation, pitchRotation), rollRotation);
+}
+
+function slerpQuaternion(from, to, t) {
+  let end = normalizeQuaternion(to);
+  let dot = quaternionDot(from, end);
+  if (dot < 0) {
+    end = { w: -end.w, x: -end.x, y: -end.y, z: -end.z };
+    dot = -dot;
+  }
+  if (dot > 0.9995) {
+    return normalizeQuaternion({
+      w: from.w + (end.w - from.w) * t,
+      x: from.x + (end.x - from.x) * t,
+      y: from.y + (end.y - from.y) * t,
+      z: from.z + (end.z - from.z) * t,
+    });
+  }
+  const theta0 = Math.acos(clamp(dot, -1, 1));
+  const sinTheta0 = Math.sin(theta0);
+  const theta = theta0 * t;
+  const sinTheta = Math.sin(theta);
+  const scaleFrom = Math.cos(theta) - dot * sinTheta / sinTheta0;
+  const scaleTo = sinTheta / sinTheta0;
+  return normalizeQuaternion({
+    w: from.w * scaleFrom + end.w * scaleTo,
+    x: from.x * scaleFrom + end.x * scaleTo,
+    y: from.y * scaleFrom + end.y * scaleTo,
+    z: from.z * scaleFrom + end.z * scaleTo,
+  });
+}
+
+function quaternionToAxisAngle(q) {
+  const normalized = normalizeQuaternion(q);
+  const angleRadians = 2 * Math.acos(clamp(normalized.w, -1, 1));
+  const sinHalf = Math.sqrt(Math.max(0, 1 - normalized.w * normalized.w));
+  if (sinHalf < 1e-5) {
+    return { x: 0, y: 0, z: 1, degrees: 0 };
+  }
+  return {
+    x: normalized.x / sinHalf,
+    y: normalized.y / sinHalf,
+    z: normalized.z / sinHalf,
+    degrees: angleRadians * 180 / Math.PI,
+  };
+}
+
+function formatAhrsLabel(roll, pitch, yaw) {
+  return `3D drone attitude model: roll ${roll.toFixed(1)} degrees, pitch ${pitch.toFixed(1)} degrees, yaw ${yaw.toFixed(1)} degrees`;
+}
+
+function updateDroneTransform() {
+  // The drone graphic is drawn nose-right so body +X maps to CSS +X and body +Y maps to CSS +Y.
+  // AHRS Euler input is converted to a quaternion using the same browser-side mapping as
+  // rotateZ(yaw) -> rotateY(-pitch) -> rotateX(-roll), then smoothed with quaternion slerp.
+  const rotation = quaternionToAxisAngle(renderedOrientation);
+  drone.style.transform =
+    `rotate3d(${rotation.x}, ${rotation.y}, ${rotation.z}, ${rotation.degrees}deg)`;
+}
+
+function scheduleDroneAnimation() {
+  if (!droneAnimationFrame) {
+    droneAnimationFrame = requestAnimationFrame(animateDrone);
+  }
+}
+
+function animateDrone() {
+  droneAnimationFrame = 0;
+  setQuaternion(renderedOrientation, slerpQuaternion(renderedOrientation, targetOrientation, 0.22));
+  const isSettled = quaternionDistance(renderedOrientation, targetOrientation) < 1e-5;
+  if (isSettled) {
+    setQuaternion(renderedOrientation, targetOrientation);
+  }
+  updateDroneTransform();
+  if (!isSettled) {
+    scheduleDroneAnimation();
+  }
 }
 
 function drawAltitudeGraph() {
@@ -133,9 +368,33 @@ function updateUI(packet) {
 
   if (packet.type === 'ahrs') {
     const d = packet.data;
-    cube.style.transform = `rotateZ(${d.yaw}deg) rotateX(${d.pitch}deg) rotateY(${d.roll}deg)`;
-    needle.style.transform = `rotate(${d.heading}deg)`;
-    headingEl.textContent = Number(d.heading).toFixed(1);
+    const roll = Number(d.roll);
+    const pitch = Number(d.pitch);
+    const yaw = Number(d.yaw);
+    const heading = Number(d.heading);
+    if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
+      drone.setAttribute('aria-label', formatAhrsLabel(roll, pitch, yaw));
+      const nextOrientation = quaternionFromAhrsEuler(roll, pitch, yaw);
+      if (!hasAhrsPacket) {
+        hasAhrsPacket = true;
+        setQuaternion(renderedOrientation, nextOrientation);
+        setQuaternion(targetOrientation, nextOrientation);
+        updateDroneTransform();
+        attitudeStateEl.textContent = 'Receiving AHRS updates';
+      } else {
+        setQuaternion(targetOrientation, nextOrientation);
+        if (quaternionDistance(renderedOrientation, targetOrientation) < 1e-5) {
+          setQuaternion(renderedOrientation, targetOrientation);
+          updateDroneTransform();
+        } else {
+          scheduleDroneAnimation();
+        }
+      }
+    }
+    if (Number.isFinite(heading)) {
+      needle.style.transform = `rotate(${heading}deg)`;
+      headingEl.textContent = heading.toFixed(1);
+    }
   }
 
   if (packet.type === 'sensor') {
