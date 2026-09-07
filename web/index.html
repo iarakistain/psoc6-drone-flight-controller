@@ -242,6 +242,10 @@ function quaternionDot(a, b) {
   return a.w * b.w + a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+function quaternionDistance(a, b) {
+  return 1 - Math.abs(clamp(quaternionDot(a, b), -1, 1));
+}
+
 function quaternionFromAxisAngle(x, y, z, degrees) {
   const halfRadians = degrees * Math.PI / 360;
   const sinHalf = Math.sin(halfRadians);
@@ -326,7 +330,7 @@ function scheduleDroneAnimation() {
 function animateDrone() {
   droneAnimationFrame = 0;
   setQuaternion(renderedOrientation, slerpQuaternion(renderedOrientation, targetOrientation, 0.22));
-  const isSettled = 1 - Math.abs(quaternionDot(renderedOrientation, targetOrientation)) < 1e-5;
+  const isSettled = quaternionDistance(renderedOrientation, targetOrientation) < 1e-5;
   if (isSettled) {
     setQuaternion(renderedOrientation, targetOrientation);
   }
@@ -373,7 +377,7 @@ function updateUI(packet) {
         attitudeStateEl.textContent = 'Receiving AHRS updates';
       } else {
         setQuaternion(targetOrientation, nextOrientation);
-        if (1 - Math.abs(quaternionDot(renderedOrientation, targetOrientation)) < 1e-5) {
+        if (quaternionDistance(renderedOrientation, targetOrientation) < 1e-5) {
           setQuaternion(renderedOrientation, targetOrientation);
           updateDroneTransform();
         } else {
