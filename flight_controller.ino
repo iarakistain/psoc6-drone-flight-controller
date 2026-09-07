@@ -363,6 +363,7 @@ static bool readSensors(SensorSample& out) {
 }
 
 static bool setLowPowerIdle(bool enable) {
+  const bool previousMode = lowPowerIdle;
   bool success = true;
   if (imu.enableAdvancedPowerSave(enable) != BMI2_OK) {
     success = false;
@@ -386,8 +387,19 @@ static bool setLowPowerIdle(bool enable) {
   if (success) {
     lowPowerIdle = enable;
   } else {
-    lowPowerIdle = false;
-    sensorHealthy = initializeSensors();
+    if (enable) {
+      imu.enableAdvancedPowerSave(false);
+      mag.setPowerMode(BMM350_NORMAL_MODE);
+      hasBaroSample = false;
+      baro.startMeasureBothCont(
+          BARO_PRESSURE_MEASUREMENT_RATE, BARO_PRESSURE_OVERSAMPLING_RATE,
+          BARO_TEMP_MEASUREMENT_RATE, BARO_TEMP_OVERSAMPLING_RATE);
+    } else {
+      imu.enableAdvancedPowerSave(true);
+      mag.setPowerMode(BMM350_SUSPEND_MODE);
+      baro.standby();
+    }
+    lowPowerIdle = previousMode;
   }
   return success;
 }

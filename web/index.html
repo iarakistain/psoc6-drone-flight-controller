@@ -194,28 +194,31 @@ async function connect() {
   }
 
   let buffer = '';
-  while (keepReading) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (!value) break;
-    buffer += value;
+  try {
+    while (keepReading) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) break;
+      buffer += value;
 
-    let nl;
-    while ((nl = buffer.indexOf('\n')) >= 0) {
-      const line = buffer.slice(0, nl).trim();
-      buffer = buffer.slice(nl + 1);
-      if (!line) continue;
-      try {
-        const packet = JSON.parse(line);
-        updateUI(packet);
-      } catch (_) {
-        parseErrors += 1;
-        deviceStatusEl.textContent = `Device: telemetry parse errors=${parseErrors}`;
+      let nl;
+      while ((nl = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (!line) continue;
+        try {
+          const packet = JSON.parse(line);
+          updateUI(packet);
+        } catch (_) {
+          parseErrors += 1;
+          deviceStatusEl.textContent = `Device: telemetry parse errors=${parseErrors}`;
+        }
       }
     }
-  }
-  if (port) {
-    await disconnect();
+  } finally {
+    if (port) {
+      await disconnect();
+    }
   }
 }
 
