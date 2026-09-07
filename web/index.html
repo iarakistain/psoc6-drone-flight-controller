@@ -104,6 +104,12 @@
       font-size: 0.9rem;
       text-align: center;
     }
+    #attitudeAxes {
+      margin-top: 4px;
+      color: #7f8da6;
+      font-size: 0.82rem;
+      text-align: center;
+    }
     #compass {
       width: 160px; height: 160px; border: 2px solid #555; border-radius: 50%;
       position: relative; margin: 8px auto;
@@ -145,6 +151,7 @@
         </div>
       </div>
       <div id="attitudeState" role="status" aria-live="polite">Awaiting first AHRS packet (neutral attitude)</div>
+      <div id="attitudeAxes">AHRS axes: roll about X, pitch about Y, yaw about Z</div>
     </div>
 
     <div class="card" style="min-width:190px;">
@@ -323,7 +330,7 @@ function updateUI(packet) {
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = yaw;
         updateDroneTransform();
-        attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
+        attitudeStateEl.textContent = 'Receiving AHRS updates';
       } else {
         targetOrientation.roll = roll;
         targetOrientation.pitch = pitch;
