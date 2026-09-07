@@ -304,6 +304,7 @@ function updateUI(packet) {
     const roll = Number(d.roll);
     const pitch = clampPitchDegrees(Number(d.pitch));
     const yaw = Number(d.yaw);
+    const heading = Number(d.heading);
     if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
       if (!hasAhrsPacket) {
         hasAhrsPacket = true;
@@ -322,8 +323,10 @@ function updateUI(packet) {
       }
       attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
     }
-    needle.style.transform = `rotate(${d.heading}deg)`;
-    headingEl.textContent = Number(d.heading).toFixed(1);
+    if (Number.isFinite(heading)) {
+      needle.style.transform = `rotate(${heading}deg)`;
+      headingEl.textContent = heading.toFixed(1);
+    }
   }
 
   if (packet.type === 'sensor') {
