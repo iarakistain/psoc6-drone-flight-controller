@@ -3,8 +3,8 @@
 AHRS Drone Flight Controller for CY8CKIT-062S2-AI with BMI270, BMM350, DPS368 sensors and WebSerial visualizer.
 
 ## Files
-- `/home/runner/work/psoc6-drone-flight-controller/psoc6-drone-flight-controller/flight_controller.ino` – complete flight controller sketch (100Hz sensor+AHRS JSON stream).
-- `/home/runner/work/psoc6-drone-flight-controller/psoc6-drone-flight-controller/web/index.html` – WebSerial visualizer (3D attitude, compass, altitude graph, telemetry).
+- `flight_controller.ino` – complete flight controller sketch (100Hz sensor+AHRS JSON stream).
+- `web/index.html` – WebSerial visualizer (3D attitude, compass, altitude graph, telemetry).
 
 ## Arduino libraries
 Install from Library Manager:

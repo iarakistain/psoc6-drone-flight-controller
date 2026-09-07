@@ -77,6 +77,7 @@
 
 <script>
 let port, reader, writer, keepReading = false, idleState = false;
+let decoder, pipeAbortController, pipePromise;
 const statusEl = document.getElementById('status');
 const cube = document.getElementById('cube');
 const needle = document.getElementById('needle');
@@ -142,8 +143,11 @@ async function connect() {
   document.getElementById('connectBtn').disabled = true;
   document.getElementById('disconnectBtn').disabled = false;
 
-  const decoder = new TextDecoderStream();
-  port.readable.pipeTo(decoder.writable);
+  decoder = new TextDecoderStream();
+  pipeAbortController = new AbortController();
+  pipePromise = port.readable
+    .pipeTo(decoder.writable, { signal: pipeAbortController.signal })
+    .catch(() => {});
   reader = decoder.readable.getReader();
 
   let buffer = '';
@@ -168,8 +172,14 @@ async function connect() {
 async function disconnect() {
   keepReading = false;
   try { if (reader) await reader.cancel(); } catch (_) {}
+  try { if (reader) reader.releaseLock(); } catch (_) {}
+  try { if (pipeAbortController) pipeAbortController.abort(); } catch (_) {}
+  try { if (pipePromise) await pipePromise; } catch (_) {}
   if (writer) writer.releaseLock();
   if (port) await port.close();
+  decoder = undefined;
+  pipeAbortController = undefined;
+  pipePromise = undefined;
   statusEl.textContent = 'Disconnected';
   document.getElementById('connectBtn').disabled = false;
   document.getElementById('disconnectBtn').disabled = true;

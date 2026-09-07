@@ -419,8 +419,9 @@ void loop() {
   }
 
   if (!readSensors(sample)) {
-    sensorHealthy = false;
-    printStatus("error", "Sensor read failed, entering recovery mode");
+    if (debugEnabled) {
+      printStatus("warning", "Transient sensor read failure; sample skipped");
+    }
     return;
   }
 
