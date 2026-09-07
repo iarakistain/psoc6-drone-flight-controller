@@ -190,8 +190,8 @@ const altHistory = [];
 let parseErrors = 0;
 let hasAhrsPacket = false;
 let droneAnimationFrame = 0;
-const renderedOrientation = { roll: 0, pitch: 0, yaw: 0 };
-const targetOrientation = { roll: 0, pitch: 0, yaw: 0 };
+const renderedOrientation = { w: 1, x: 0, y: 0, z: 0 };
+const targetOrientation = { w: 1, x: 0, y: 0, z: 0 };
 
 function setIdleUi(isIdle) {
   idleState = isIdle;
@@ -209,12 +209,8 @@ function resetSessionUi() {
     droneAnimationFrame = 0;
   }
   hasAhrsPacket = false;
-  renderedOrientation.roll = 0;
-  renderedOrientation.pitch = 0;
-  renderedOrientation.yaw = 0;
-  targetOrientation.roll = 0;
-  targetOrientation.pitch = 0;
-  targetOrientation.yaw = 0;
+  setQuaternion(renderedOrientation, { w: 1, x: 0, y: 0, z: 0 });
+  setQuaternion(targetOrientation, { w: 1, x: 0, y: 0, z: 0 });
   updateDroneTransform();
   headingEl.textContent = '0.0';
   altitudeEl.textContent = '0.00';
@@ -223,46 +219,102 @@ function resetSessionUi() {
   deviceStatusEl.textContent = 'Device: disconnected';
 }
 
-function unwrapAngleDegrees(previous, next) {
-  let delta = next - previous;
-  while (delta > 180) delta -= 360;
-  while (delta < -180) delta += 360;
-  return previous + delta;
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function unwrapYawDegrees(next) {
-  let candidate = unwrapAngleDegrees(targetOrientation.yaw, next);
-  let renderedDelta = candidate - renderedOrientation.yaw;
-  while (renderedDelta > 180) {
-    candidate -= 360;
-    renderedDelta -= 360;
-  }
-  while (renderedDelta < -180) {
-    candidate += 360;
-    renderedDelta += 360;
-  }
-  return candidate;
+function setQuaternion(target, source) {
+  target.w = source.w;
+  target.x = source.x;
+  target.y = source.y;
+  target.z = source.z;
 }
 
-function normalizeContinuousAngle(axis) {
-  const anchor = Math.abs(targetOrientation[axis]) >= Math.abs(renderedOrientation[axis])
-    ? targetOrientation[axis]
-    : renderedOrientation[axis];
-  const turns = Math.round(anchor / 360);
-  if (turns !== 0) {
-    const offset = turns * 360;
-    targetOrientation[axis] -= offset;
-    renderedOrientation[axis] -= offset;
+function normalizeQuaternion(q) {
+  const magnitude = Math.hypot(q.w, q.x, q.y, q.z);
+  if (magnitude <= 1e-8) {
+    return { w: 1, x: 0, y: 0, z: 0 };
   }
+  return { w: q.w / magnitude, x: q.x / magnitude, y: q.y / magnitude, z: q.z / magnitude };
+}
+
+function quaternionDot(a, b) {
+  return a.w * b.w + a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function quaternionFromAxisAngle(x, y, z, degrees) {
+  const halfRadians = degrees * Math.PI / 360;
+  const sinHalf = Math.sin(halfRadians);
+  return normalizeQuaternion({ w: Math.cos(halfRadians), x: x * sinHalf, y: y * sinHalf, z: z * sinHalf });
+}
+
+function multiplyQuaternions(a, b) {
+  return normalizeQuaternion({
+    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+  });
+}
+
+function quaternionFromAhrsEuler(roll, pitch, yaw) {
+  const yawRotation = quaternionFromAxisAngle(0, 0, 1, yaw);
+  const pitchRotation = quaternionFromAxisAngle(0, 1, 0, -pitch);
+  const rollRotation = quaternionFromAxisAngle(1, 0, 0, -roll);
+  return multiplyQuaternions(yawRotation, multiplyQuaternions(pitchRotation, rollRotation));
+}
+
+function slerpQuaternion(from, to, t) {
+  let end = normalizeQuaternion(to);
+  let dot = quaternionDot(from, end);
+  if (dot < 0) {
+    end = { w: -end.w, x: -end.x, y: -end.y, z: -end.z };
+    dot = -dot;
+  }
+  if (dot > 0.9995) {
+    return normalizeQuaternion({
+      w: from.w + (end.w - from.w) * t,
+      x: from.x + (end.x - from.x) * t,
+      y: from.y + (end.y - from.y) * t,
+      z: from.z + (end.z - from.z) * t,
+    });
+  }
+  const theta0 = Math.acos(clamp(dot, -1, 1));
+  const sinTheta0 = Math.sin(theta0);
+  const theta = theta0 * t;
+  const sinTheta = Math.sin(theta);
+  const scaleFrom = Math.cos(theta) - dot * sinTheta / sinTheta0;
+  const scaleTo = sinTheta / sinTheta0;
+  return {
+    w: from.w * scaleFrom + end.w * scaleTo,
+    x: from.x * scaleFrom + end.x * scaleTo,
+    y: from.y * scaleFrom + end.y * scaleTo,
+    z: from.z * scaleFrom + end.z * scaleTo,
+  };
+}
+
+function quaternionToAxisAngle(q) {
+  const normalized = normalizeQuaternion(q);
+  const angleRadians = 2 * Math.acos(clamp(normalized.w, -1, 1));
+  const sinHalf = Math.sqrt(Math.max(0, 1 - normalized.w * normalized.w));
+  if (sinHalf < 1e-5) {
+    return { x: 0, y: 0, z: 1, degrees: 0 };
+  }
+  return {
+    x: normalized.x / sinHalf,
+    y: normalized.y / sinHalf,
+    z: normalized.z / sinHalf,
+    degrees: angleRadians * 180 / Math.PI,
+  };
 }
 
 function updateDroneTransform() {
   // The drone graphic is drawn nose-right so body +X maps to CSS +X and body +Y maps to CSS +Y.
-  // AHRS uses aerospace body axes in degrees: +roll about X, +pitch nose-up about Y, +yaw about Z.
-  // The camera looks down onto the drone with CSS +Z toward the viewer, so roll and pitch are inverted
-  // to keep right-wing-down and nose-up visually correct in the browser scene.
+  // AHRS Euler input is converted to a quaternion using the same browser-side mapping as
+  // rotateZ(yaw) -> rotateY(-pitch) -> rotateX(-roll), then smoothed with quaternion slerp.
+  const rotation = quaternionToAxisAngle(renderedOrientation);
   drone.style.transform =
-    `rotateZ(${renderedOrientation.yaw}deg) rotateY(${-renderedOrientation.pitch}deg) rotateX(${-renderedOrientation.roll}deg)`;
+    `rotate3d(${rotation.x}, ${rotation.y}, ${rotation.z}, ${rotation.degrees}deg)`;
 }
 
 function scheduleDroneAnimation() {
@@ -273,12 +325,10 @@ function scheduleDroneAnimation() {
 
 function animateDrone() {
   droneAnimationFrame = 0;
-  const smoothing = 0.22;
-  renderedOrientation.yaw += (targetOrientation.yaw - renderedOrientation.yaw) * smoothing;
-  normalizeContinuousAngle('yaw');
-  const isSettled = Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01;
+  setQuaternion(renderedOrientation, slerpQuaternion(renderedOrientation, targetOrientation, 0.22));
+  const isSettled = 1 - Math.abs(quaternionDot(renderedOrientation, targetOrientation)) < 1e-5;
   if (isSettled) {
-    renderedOrientation.yaw = targetOrientation.yaw;
+    setQuaternion(renderedOrientation, targetOrientation);
   }
   updateDroneTransform();
   if (!isSettled) {
@@ -314,27 +364,19 @@ function updateUI(packet) {
     const yaw = Number(d.yaw);
     const heading = Number(d.heading);
     if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
+      const nextOrientation = quaternionFromAhrsEuler(roll, pitch, yaw);
       if (!hasAhrsPacket) {
         hasAhrsPacket = true;
-        renderedOrientation.roll = roll;
-        renderedOrientation.pitch = pitch;
-        renderedOrientation.yaw = yaw;
-        targetOrientation.roll = roll;
-        targetOrientation.pitch = pitch;
-        targetOrientation.yaw = yaw;
+        setQuaternion(renderedOrientation, nextOrientation);
+        setQuaternion(targetOrientation, nextOrientation);
         updateDroneTransform();
         attitudeStateEl.textContent = 'Receiving AHRS updates';
       } else {
-        renderedOrientation.roll = roll;
-        targetOrientation.roll = roll;
-        renderedOrientation.pitch = pitch;
-        targetOrientation.pitch = pitch;
-        targetOrientation.yaw = unwrapYawDegrees(yaw);
-        if (Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01) {
-          renderedOrientation.yaw = targetOrientation.yaw;
+        setQuaternion(targetOrientation, nextOrientation);
+        if (1 - Math.abs(quaternionDot(renderedOrientation, targetOrientation)) < 1e-5) {
+          setQuaternion(renderedOrientation, targetOrientation);
           updateDroneTransform();
         } else {
-          updateDroneTransform();
           scheduleDroneAnimation();
         }
       }
