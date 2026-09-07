@@ -312,7 +312,7 @@ function updateUI(packet) {
       } else {
         targetOrientation.roll = roll;
         targetOrientation.pitch = pitch;
-        targetOrientation.yaw = unwrapAngleDegrees(targetOrientation.yaw, yaw);
+        targetOrientation.yaw = unwrapAngleDegrees(renderedOrientation.yaw, yaw);
         scheduleDroneAnimation();
       }
       attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
