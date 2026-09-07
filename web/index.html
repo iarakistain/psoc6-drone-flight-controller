@@ -170,12 +170,20 @@ function setViewerStatus(text = '') {
 
 function setAttitudeFromEulerDegrees(rollDeg, pitchDeg, yawDeg) {
   if (![rollDeg, pitchDeg, yawDeg].every(Number.isFinite)) return false;
-  const deviceQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(
-    THREE.MathUtils.degToRad(pitchDeg),
-    THREE.MathUtils.degToRad(rollDeg),
-    THREE.MathUtils.degToRad(yawDeg),
-    'ZXY'
-  ));
+  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    THREE.MathUtils.degToRad(yawDeg)
+  );
+  const pitchQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    THREE.MathUtils.degToRad(pitchDeg)
+  );
+  const rollQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0),
+    THREE.MathUtils.degToRad(rollDeg)
+  );
+  // Preserve the original CSS fallback order: rotateZ(yaw) rotateX(pitch) rotateY(roll).
+  const deviceQuaternion = yawQuaternion.multiply(pitchQuaternion).multiply(rollQuaternion);
   targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(deviceQuaternion).multiply(deviceToSceneInverse);
   return true;
 }
