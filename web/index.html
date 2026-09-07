@@ -202,12 +202,12 @@ async function toggleIdle() {
   idleState = nextIdleState;
 }
 
-document.getElementById('connectBtn').onclick = () => connect().catch(err => {
+document.getElementById('connectBtn').addEventListener('click', () => connect().catch(err => {
   statusEl.textContent = `Connect error: ${err.message}`;
   deviceStatusEl.textContent = 'Device: disconnected';
-});
-document.getElementById('disconnectBtn').onclick = () => disconnect().catch(() => {});
-document.getElementById('idleBtn').onclick = () => toggleIdle().catch(() => {});
+}));
+document.getElementById('disconnectBtn').addEventListener('click', () => disconnect().catch(() => {}));
+document.getElementById('idleBtn').addEventListener('click', () => toggleIdle().catch(() => {}));
 </script>
 </body>
 </html>

@@ -285,6 +285,11 @@ static bool initializeSensors() {
   }
 
   baro.begin(Wire);
+  const uint8_t baroProductId = baro.getProductId();
+  if (baroProductId == 0x00 || baroProductId == 0xFF) {
+    printStatus("error", "DPS368 did not respond with a valid product ID");
+    return false;
+  }
   int16_t baroInit = baro.startMeasureBothCont(7, 0, 7, 0);
   if (baroInit != 0) {
     printStatus("error", "DPS368 continuous measurement init failed");
@@ -325,7 +330,7 @@ static bool readSensors(SensorSample& out) {
   uint8_t temperatureCount = 4;
   uint8_t pressureCount = 4;
   const int16_t dpsStatus = baro.getContResults(temperatureBuf, temperatureCount, pressureBuf, pressureCount);
-  if (dpsStatus == 0 && temperatureCount > 0 && pressureCount > 0) {
+  if (dpsStatus >= 0 && temperatureCount > 0 && pressureCount > 0) {
     lastBaroTemperatureC = temperatureBuf[temperatureCount - 1];
     lastBaroPressurePa = pressureBuf[pressureCount - 1];
     hasBaroSample = true;
@@ -432,7 +437,8 @@ static void streamAhrsJson(const Quaternion& q, const Vec3& euler) {
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
-  while (!Serial) {
+  const uint32_t serialWaitStart = millis();
+  while (!Serial && (millis() - serialWaitStart) < 2000) {
     delay(10);
   }
 
