@@ -23,7 +23,7 @@ Each line is a JSON object:
 
 `sensor.data.baro` includes both `altitudeM` (standard pressure altitude) and `compensatedAltitudeM` (temperature-compensated altitude).
 
-`ahrs.data` includes `roll`, `pitch`, `yaw`, and `heading` in degrees plus a `quaternion`. The WebSerial visualizer maps those Euler angles as `rotateZ(yaw) rotateX(-pitch) rotateY(-roll)` so positive pitch stays nose-up and positive roll stays right-wing-down in the browser scene.
+`ahrs.data` includes `roll`, `pitch`, `yaw`, and `heading` in degrees plus a `quaternion`. The WebSerial visualizer draws the drone nose-right and maps those Euler angles as `rotateZ(yaw) rotateY(-pitch) rotateX(-roll)` so positive pitch stays nose-up and positive roll stays right-wing-down in the browser scene.
 
 ## Runtime commands
 Send over serial:

@@ -49,8 +49,8 @@
     .nose {
       width: 18px;
       height: 18px;
-      margin-left: -9px;
-      margin-top: -35px;
+      margin-left: 18px;
+      margin-top: -9px;
       border-radius: 50%;
       background: #ff9555;
       border: 1px solid rgba(255, 220, 200, 0.85);
@@ -236,11 +236,12 @@ function normalizeContinuousAngle(axis) {
 }
 
 function updateDroneTransform() {
-  // AHRS uses aerospace body axes in degrees: +roll about forward X, +pitch nose-up about Y,
-  // +yaw clockwise heading about Z. CSS 3D uses screen axes (+X right, +Y down, +Z toward viewer),
-  // so pitch and roll are inverted to keep nose-up and right-wing-down visually correct in the scene.
+  // The drone graphic is drawn nose-right so body +X maps to CSS +X and body +Y maps to CSS +Y.
+  // AHRS uses aerospace body axes in degrees: +roll about X, +pitch nose-up about Y, +yaw about Z.
+  // The camera looks down onto the drone with CSS +Z toward the viewer, so roll and pitch are inverted
+  // to keep right-wing-down and nose-up visually correct in the browser scene.
   drone.style.transform =
-    `rotateZ(${renderedOrientation.yaw}deg) rotateX(${-renderedOrientation.pitch}deg) rotateY(${-renderedOrientation.roll}deg)`;
+    `rotateZ(${renderedOrientation.yaw}deg) rotateY(${-renderedOrientation.pitch}deg) rotateX(${-renderedOrientation.roll}deg)`;
 }
 
 function animateDrone() {
