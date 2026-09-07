@@ -295,7 +295,7 @@ function updateUI(packet) {
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = unwrapAngleDegrees(targetOrientation.yaw, yaw);
       }
-      attitudeStateEl.textContent = 'Live AHRS attitude (roll X, pitch Y, yaw Z)';
+      attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
     }
     needle.style.transform = `rotate(${d.heading}deg)`;
     headingEl.textContent = Number(d.heading).toFixed(1);
