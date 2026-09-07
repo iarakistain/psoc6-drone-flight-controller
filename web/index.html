@@ -104,6 +104,8 @@ function resetSessionUi() {
   parseErrors = 0;
   altHistory.length = 0;
   drawAltitudeGraph();
+  headingEl.textContent = '0.0';
+  altitudeEl.textContent = '0.00';
   telemetryText.textContent = 'Waiting for data...';
   deviceStatusEl.textContent = 'Device: disconnected';
 }
@@ -232,6 +234,7 @@ async function disconnect() {
   pipeAbortController = undefined;
   pipePromise = undefined;
   statusEl.textContent = 'Disconnected';
+  resetSessionUi();
   document.getElementById('connectBtn').disabled = false;
   document.getElementById('disconnectBtn').disabled = true;
 }

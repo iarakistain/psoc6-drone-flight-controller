@@ -185,6 +185,7 @@ float lastBaroPressurePa = 0.0f;
 float lastBaroTemperatureC = 0.0f;
 
 String serialLine;
+bool serialLineOverflow = false;
 
 static Vec3 applyMagCalibration(const Vec3& raw) {
   Vec3 centered {
@@ -384,6 +385,9 @@ static bool setLowPowerIdle(bool enable) {
   }
   if (success) {
     lowPowerIdle = enable;
+  } else {
+    lowPowerIdle = false;
+    sensorHealthy = initializeSensors();
   }
   return success;
 }
@@ -407,7 +411,9 @@ static void processSerialCommands() {
   while (Serial.available() > 0) {
     const char ch = static_cast<char>(Serial.read());
     if (ch == '\n' || ch == '\r') {
-      if (serialLine == "IDLE:1") {
+      if (serialLineOverflow) {
+        printStatus("warning", "Command too long");
+      } else if (serialLine == "IDLE:1") {
         if (setLowPowerIdle(true)) {
           printStatus("info", "Entered low power idle mode");
         } else {
@@ -429,8 +435,11 @@ static void processSerialCommands() {
         printStatus("warning", "Unknown command");
       }
       serialLine = "";
-    } else if (serialLine.length() < 48) {
+      serialLineOverflow = false;
+    } else if (serialLine.length() < 48 && !serialLineOverflow) {
       serialLine += ch;
+    } else {
+      serialLineOverflow = true;
     }
   }
 }
