@@ -117,6 +117,8 @@ function drawAltitudeGraph() {
 }
 
 function updateUI(packet) {
+  telemetryText.textContent = JSON.stringify(packet, null, 2);
+
   if (packet.type === 'ahrs') {
     const d = packet.data;
     cube.style.transform = `rotateZ(${d.yaw}deg) rotateX(${d.pitch}deg) rotateY(${d.roll}deg)`;
@@ -134,7 +136,6 @@ function updateUI(packet) {
       drawAltitudeGraph();
     }
 
-    telemetryText.textContent = JSON.stringify(packet, null, 2);
   }
 
   if (packet.type === 'status') {
@@ -174,6 +175,11 @@ async function connect() {
     writer = undefined;
     port = undefined;
     setIdleUi(false);
+    parseErrors = 0;
+    altHistory.length = 0;
+    drawAltitudeGraph();
+    telemetryText.textContent = 'Waiting for data...';
+    deviceStatusEl.textContent = 'Device: disconnected';
     decoder = undefined;
     pipeAbortController = undefined;
     pipePromise = undefined;

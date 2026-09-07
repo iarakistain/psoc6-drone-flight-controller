@@ -203,16 +203,16 @@ static float computeAltitudeMeters(float pressurePa, float temperatureC) {
   if (pressurePa <= 0.0f) {
     return NAN;
   }
-
-  static float computeCompensatedAltitudeMeters(float pressurePa, float temperatureC) {
-    if (pressurePa <= 0.0f) {
-      return NAN;
-    }
-    const float tempK = temperatureC + 273.15f;
-    return ((powf(SEA_LEVEL_PRESSURE_PA / pressurePa, 1.0f / 5.257f) - 1.0f) * tempK) / 0.0065f;
-  }
   (void)temperatureC;
   return 44330.0f * (1.0f - powf(pressurePa / SEA_LEVEL_PRESSURE_PA, 0.19029495f));
+}
+
+static float computeCompensatedAltitudeMeters(float pressurePa, float temperatureC) {
+  if (pressurePa <= 0.0f) {
+    return NAN;
+  }
+  const float tempK = temperatureC + 273.15f;
+  return ((powf(SEA_LEVEL_PRESSURE_PA / pressurePa, 1.0f / 5.257f) - 1.0f) * tempK) / 0.0065f;
 }
 
 static void quaternionToEuler(const Quaternion& q, Vec3& euler) {
