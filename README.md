@@ -9,7 +9,7 @@ AHRS Drone Flight Controller for CY8CKIT-062S2-AI with BMI270, BMM350, DPS368 se
 ## Arduino libraries
 Install from Library Manager:
 - `SparkFun BMI270 Arduino Library` by SparkFun, version `1.0.3` (header: `SparkFun_BMI270_Arduino_Library.h`)
-- `BMM350` by Matteo Cancian (`BMM350-Magnetometer` repo), version `1.3.0` (header: `BMM350.h`)
+- `BMM350` by Matteo Cancian, version `1.3.0` (header: `BMM350.h`). If not visible in Library Manager, install manually from `https://github.com/CancianMatteo/BMM350-Magnetometer` as ZIP.
 - `XENSIV Digital Pressure Sensor` by Infineon, version `1.0.3` (header: `Dps3xx.h`)
 
 ## Board package

@@ -199,11 +199,10 @@ static Vec3 applyMagCalibration(const Vec3& raw) {
   return calibrated;
 }
 
-static float computeAltitudeMeters(float pressurePa, float temperatureC) {
+static float computeAltitudeMeters(float pressurePa) {
   if (pressurePa <= 0.0f) {
     return NAN;
   }
-  (void)temperatureC;
   return 44330.0f * (1.0f - powf(pressurePa / SEA_LEVEL_PRESSURE_PA, 0.19029495f));
 }
 
@@ -357,7 +356,7 @@ static bool readSensors(SensorSample& out) {
   out.temperatureC = lastBaroTemperatureC;
   out.pressurePa = lastBaroPressurePa;
 
-  out.altitudeM = computeAltitudeMeters(out.pressurePa, out.temperatureC);
+  out.altitudeM = computeAltitudeMeters(out.pressurePa);
   out.compensatedAltitudeM = computeCompensatedAltitudeMeters(out.pressurePa, out.temperatureC);
   return true;
 }

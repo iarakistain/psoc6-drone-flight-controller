@@ -15,6 +15,7 @@
       transform-style: preserve-3d;
       transition: transform 0.05s linear;
     }
+
     .face {
       position: absolute; width: 140px; height: 140px; border: 1px solid #5af;
       background: rgba(40,120,255,0.15); line-height: 140px; text-align: center;
@@ -98,6 +99,15 @@ function setIdleUi(isIdle) {
   idleBtn.setAttribute('aria-pressed', idleState ? 'true' : 'false');
 }
 
+function resetSessionUi() {
+  setIdleUi(false);
+  parseErrors = 0;
+  altHistory.length = 0;
+  drawAltitudeGraph();
+  telemetryText.textContent = 'Waiting for data...';
+  deviceStatusEl.textContent = 'Device: disconnected';
+}
+
 function drawAltitudeGraph() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (altHistory.length < 2) return;
@@ -174,12 +184,7 @@ async function connect() {
     reader = undefined;
     writer = undefined;
     port = undefined;
-    setIdleUi(false);
-    parseErrors = 0;
-    altHistory.length = 0;
-    drawAltitudeGraph();
-    telemetryText.textContent = 'Waiting for data...';
-    deviceStatusEl.textContent = 'Device: disconnected';
+    resetSessionUi();
     decoder = undefined;
     pipeAbortController = undefined;
     pipePromise = undefined;
@@ -190,6 +195,7 @@ async function connect() {
   while (keepReading) {
     const { value, done } = await reader.read();
     if (done) break;
+    if (!value) break;
     buffer += value;
 
     let nl;
@@ -205,6 +211,9 @@ async function connect() {
         deviceStatusEl.textContent = `Device: telemetry parse errors=${parseErrors}`;
       }
     }
+  }
+  if (port) {
+    await disconnect();
   }
 }
 
@@ -235,7 +244,7 @@ async function toggleIdle() {
 
 document.getElementById('connectBtn').addEventListener('click', () => connect().catch(err => {
   statusEl.textContent = `Connect error: ${err.message}`;
-  deviceStatusEl.textContent = 'Device: disconnected';
+  resetSessionUi();
 }));
 document.getElementById('disconnectBtn').addEventListener('click', () => disconnect().catch(err => {
   statusEl.textContent = `Disconnect error: ${err.message}`;
@@ -243,7 +252,7 @@ document.getElementById('disconnectBtn').addEventListener('click', () => disconn
 idleBtn.addEventListener('click', () => toggleIdle().catch(err => {
   statusEl.textContent = `Idle command error: ${err.message}`;
 }));
-setIdleUi(false);
+resetSessionUi();
 </script>
 </body>
 </html>
