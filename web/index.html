@@ -266,7 +266,7 @@ function quaternionFromAhrsEuler(roll, pitch, yaw) {
   const yawRotation = quaternionFromAxisAngle(0, 0, 1, yaw);
   const pitchRotation = quaternionFromAxisAngle(0, 1, 0, -pitch);
   const rollRotation = quaternionFromAxisAngle(1, 0, 0, -roll);
-  return multiplyQuaternions(yawRotation, multiplyQuaternions(pitchRotation, rollRotation));
+  return multiplyQuaternions(multiplyQuaternions(yawRotation, pitchRotation), rollRotation);
 }
 
 function slerpQuaternion(from, to, t) {
