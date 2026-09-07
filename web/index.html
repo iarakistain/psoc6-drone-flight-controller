@@ -223,11 +223,6 @@ function unwrapAngleDegrees(previous, next) {
   return previous + delta;
 }
 
-function clampPitchDegrees(pitch) {
-  // The firmware computes pitch from asin/copySign, so valid AHRS pitch stays within [-90, 90].
-  return Math.max(-90, Math.min(90, pitch));
-}
-
 function normalizeContinuousAngle(axis) {
   const anchor = Math.abs(targetOrientation[axis]) >= Math.abs(renderedOrientation[axis])
     ? targetOrientation[axis]
@@ -261,7 +256,6 @@ function animateDrone() {
   renderedOrientation.roll += (targetOrientation.roll - renderedOrientation.roll) * smoothing;
   renderedOrientation.pitch += (targetOrientation.pitch - renderedOrientation.pitch) * smoothing;
   renderedOrientation.yaw += (targetOrientation.yaw - renderedOrientation.yaw) * smoothing;
-  normalizeContinuousAngle('roll');
   normalizeContinuousAngle('yaw');
   const isSettled =
     Math.abs(targetOrientation.roll - renderedOrientation.roll) < 0.01 &&
@@ -302,7 +296,7 @@ function updateUI(packet) {
   if (packet.type === 'ahrs') {
     const d = packet.data;
     const roll = Number(d.roll);
-    const pitch = clampPitchDegrees(Number(d.pitch));
+    const pitch = Number(d.pitch);
     const yaw = Number(d.yaw);
     const heading = Number(d.heading);
     if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
@@ -316,7 +310,7 @@ function updateUI(packet) {
         targetOrientation.yaw = yaw;
         updateDroneTransform();
       } else {
-        targetOrientation.roll = unwrapAngleDegrees(targetOrientation.roll, roll);
+        targetOrientation.roll = roll;
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = unwrapAngleDegrees(targetOrientation.yaw, yaw);
         scheduleDroneAnimation();
