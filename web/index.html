@@ -218,6 +218,11 @@ function unwrapAngleDegrees(previous, next) {
   return previous + delta;
 }
 
+function clampPitchDegrees(pitch) {
+  // The firmware computes pitch from asin/copySign, so valid AHRS pitch stays within [-90, 90].
+  return Math.max(-90, Math.min(90, pitch));
+}
+
 function updateDroneTransform() {
   // AHRS uses aerospace body axes in degrees: +roll about forward X, +pitch nose-up about Y,
   // +yaw clockwise heading about Z. CSS 3D uses screen axes (+X right, +Y down, +Z toward viewer),
@@ -259,7 +264,7 @@ function updateUI(packet) {
   if (packet.type === 'ahrs') {
     const d = packet.data;
     const roll = Number(d.roll);
-    const pitch = Number(d.pitch);
+    const pitch = clampPitchDegrees(Number(d.pitch));
     const yaw = Number(d.yaw);
     if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
       if (!hasAhrsPacket) {
