@@ -154,8 +154,9 @@ function initViewer() {
 
 function resizeViewer() {
   if (!renderer || !camera) return;
-  const width = modelCanvas.clientWidth || modelCanvas.parentElement.clientWidth;
-  const height = modelCanvas.clientHeight || modelCanvas.parentElement.clientHeight;
+  const parent = modelCanvas.parentElement;
+  const width = modelCanvas.clientWidth || parent?.clientWidth || 0;
+  const height = modelCanvas.clientHeight || parent?.clientHeight || 0;
   if (!width || !height) return;
   renderer.setSize(width, height, false);
   camera.aspect = width / height;
