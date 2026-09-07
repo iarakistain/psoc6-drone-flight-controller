@@ -120,10 +120,13 @@ function updateUI(packet) {
 
   if (packet.type === 'sensor') {
     const d = packet.data;
-    altitudeEl.textContent = Number(d.baro.altitudeM).toFixed(2);
-    altHistory.push(Number(d.baro.altitudeM));
-    if (altHistory.length > 240) altHistory.shift();
-    drawAltitudeGraph();
+    const altitude = Number(d.baro.altitudeM);
+    if (Number.isFinite(altitude)) {
+      altitudeEl.textContent = altitude.toFixed(2);
+      altHistory.push(altitude);
+      if (altHistory.length > 240) altHistory.shift();
+      drawAltitudeGraph();
+    }
 
     telemetryText.textContent = JSON.stringify(packet, null, 2);
   }
@@ -139,20 +142,33 @@ async function connect() {
     return;
   }
 
-  port = await navigator.serial.requestPort();
-  await port.open({ baudRate: 115200 });
-  writer = port.writable.getWriter();
-  keepReading = true;
-  statusEl.textContent = 'Connected';
-  document.getElementById('connectBtn').disabled = true;
-  document.getElementById('disconnectBtn').disabled = false;
-
-  decoder = new TextDecoderStream();
-  pipeAbortController = new AbortController();
-  pipePromise = port.readable
-    .pipeTo(decoder.writable, { signal: pipeAbortController.signal })
-    .catch(() => {});
-  reader = decoder.readable.getReader();
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    writer = port.writable.getWriter();
+    decoder = new TextDecoderStream();
+    pipeAbortController = new AbortController();
+    pipePromise = port.readable
+      .pipeTo(decoder.writable, { signal: pipeAbortController.signal })
+      .catch(() => {});
+    reader = decoder.readable.getReader();
+    keepReading = true;
+    statusEl.textContent = 'Connected';
+    document.getElementById('connectBtn').disabled = true;
+    document.getElementById('disconnectBtn').disabled = false;
+  } catch (error) {
+    keepReading = false;
+    try { if (reader) reader.releaseLock(); } catch (_) {}
+    try { if (writer) writer.releaseLock(); } catch (_) {}
+    try { if (port) await port.close(); } catch (_) {}
+    reader = undefined;
+    writer = undefined;
+    port = undefined;
+    decoder = undefined;
+    pipeAbortController = undefined;
+    pipePromise = undefined;
+    throw error;
+  }
 
   let buffer = '';
   while (keepReading) {
