@@ -21,6 +21,8 @@ Each line is a JSON object:
 - `{"type":"ahrs","data":{...},"timestamp":ms}`
 - `{"type":"status","data":{...},"timestamp":ms}`
 
+`sensor.data.baro` includes both `altitudeM` (standard pressure altitude) and `compensatedAltitudeM` (temperature-compensated altitude).
+
 ## Runtime commands
 Send over serial:
 - `IDLE:1` / `IDLE:0` – enter/exit low-power idle mode.

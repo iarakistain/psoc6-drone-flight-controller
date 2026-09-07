@@ -40,6 +40,7 @@ struct SensorSample {
   float pressurePa;
   float temperatureC;
   float altitudeM;
+  float compensatedAltitudeM;
 };
 
 class MadgwickAHRS {
@@ -202,10 +203,16 @@ static float computeAltitudeMeters(float pressurePa, float temperatureC) {
   if (pressurePa <= 0.0f) {
     return NAN;
   }
-  const float baseAltitude = 44330.0f * (1.0f - powf(pressurePa / SEA_LEVEL_PRESSURE_PA, 0.19029495f));
-  const float measuredTempK = temperatureC + 273.15f;
-  const float isaTempK = fmaxf(200.0f, 288.15f - 0.0065f * baseAltitude);
-  return baseAltitude * (measuredTempK / isaTempK);
+
+  static float computeCompensatedAltitudeMeters(float pressurePa, float temperatureC) {
+    if (pressurePa <= 0.0f) {
+      return NAN;
+    }
+    const float tempK = temperatureC + 273.15f;
+    return ((powf(SEA_LEVEL_PRESSURE_PA / pressurePa, 1.0f / 5.257f) - 1.0f) * tempK) / 0.0065f;
+  }
+  (void)temperatureC;
+  return 44330.0f * (1.0f - powf(pressurePa / SEA_LEVEL_PRESSURE_PA, 0.19029495f));
 }
 
 static void quaternionToEuler(const Quaternion& q, Vec3& euler) {
@@ -351,6 +358,7 @@ static bool readSensors(SensorSample& out) {
   out.pressurePa = lastBaroPressurePa;
 
   out.altitudeM = computeAltitudeMeters(out.pressurePa, out.temperatureC);
+  out.compensatedAltitudeM = computeCompensatedAltitudeMeters(out.pressurePa, out.temperatureC);
   return true;
 }
 
@@ -442,6 +450,7 @@ static void streamSensorJson(const SensorSample& s) {
   Serial.print("},\"baro\":{\"pressurePa\":"); Serial.print(s.pressurePa, 2);
   Serial.print(",\"temperatureC\":"); Serial.print(s.temperatureC, 2);
   Serial.print(",\"altitudeM\":"); Serial.print(s.altitudeM, 2);
+  Serial.print(",\"compensatedAltitudeM\":"); Serial.print(s.compensatedAltitudeM, 2);
   Serial.print("}},\"timestamp\":");
   Serial.print(millis());
   Serial.println("}");
