@@ -223,6 +223,18 @@ function clampPitchDegrees(pitch) {
   return Math.max(-90, Math.min(90, pitch));
 }
 
+function normalizeContinuousAngle(axis) {
+  const anchor = Math.abs(targetOrientation[axis]) >= Math.abs(renderedOrientation[axis])
+    ? targetOrientation[axis]
+    : renderedOrientation[axis];
+  const turns = Math.round(anchor / 360);
+  if (turns !== 0) {
+    const offset = turns * 360;
+    targetOrientation[axis] -= offset;
+    renderedOrientation[axis] -= offset;
+  }
+}
+
 function updateDroneTransform() {
   // AHRS uses aerospace body axes in degrees: +roll about forward X, +pitch nose-up about Y,
   // +yaw clockwise heading about Z. CSS 3D uses screen axes (+X right, +Y down, +Z toward viewer),
@@ -236,6 +248,8 @@ function animateDrone() {
   renderedOrientation.roll += (targetOrientation.roll - renderedOrientation.roll) * smoothing;
   renderedOrientation.pitch += (targetOrientation.pitch - renderedOrientation.pitch) * smoothing;
   renderedOrientation.yaw += (targetOrientation.yaw - renderedOrientation.yaw) * smoothing;
+  normalizeContinuousAngle('roll');
+  normalizeContinuousAngle('yaw');
   updateDroneTransform();
   requestAnimationFrame(animateDrone);
 }
