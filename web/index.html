@@ -9,23 +9,15 @@
     .row { display: flex; gap: 16px; flex-wrap: wrap; }
     .card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 12px; }
     #telemetry { min-width: 320px; }
-    #cubeWrap { perspective: 600px; width: 220px; height: 220px; }
-    #cube {
-      width: 140px; height: 140px; margin: 36px auto;
-      transform-style: preserve-3d;
-      transition: transform 0.05s linear;
+    #cubeWrap {
+      width: 220px; height: 220px; padding: 0; overflow: hidden; position: relative;
+      background: radial-gradient(circle at top, #18345c 0%, #08111f 65%, #02060b 100%);
     }
-
-    .face {
-      position: absolute; width: 140px; height: 140px; border: 1px solid #5af;
-      background: rgba(40,120,255,0.15); line-height: 140px; text-align: center;
+    #modelCanvas { display: block; width: 100%; height: 100%; }
+    #viewerStatus {
+      position: absolute; inset: auto 0 10px 0; text-align: center;
+      color: #9ad; font-size: 12px; pointer-events: none;
     }
-    .f1 { transform: rotateY(0deg) translateZ(70px); }
-    .f2 { transform: rotateY(180deg) translateZ(70px); }
-    .f3 { transform: rotateY(90deg) translateZ(70px); }
-    .f4 { transform: rotateY(-90deg) translateZ(70px); }
-    .f5 { transform: rotateX(90deg) translateZ(70px); }
-    .f6 { transform: rotateX(-90deg) translateZ(70px); }
     #compass {
       width: 160px; height: 160px; border: 2px solid #555; border-radius: 50%;
       position: relative; margin: 8px auto;
@@ -52,11 +44,8 @@
 
   <div class="row" style="margin-top:12px;">
     <div class="card" id="cubeWrap">
-      <div id="cube">
-        <div class="face f1">Front</div><div class="face f2">Back</div>
-        <div class="face f3">Right</div><div class="face f4">Left</div>
-        <div class="face f5">Top</div><div class="face f6">Bottom</div>
-      </div>
+      <canvas id="modelCanvas" aria-label="3D drone attitude visualizer"></canvas>
+      <div id="viewerStatus">Loading 3D model…</div>
     </div>
 
     <div class="card" style="min-width:190px;">
@@ -77,12 +66,24 @@
     </div>
   </div>
 
-<script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
 let port, reader, writer, keepReading = false, idleState = false;
 let decoder, pipeAbortController, pipePromise;
 const statusEl = document.getElementById('status');
 const deviceStatusEl = document.getElementById('deviceStatus');
-const cube = document.getElementById('cube');
+const modelCanvas = document.getElementById('modelCanvas');
+const viewerStatusEl = document.getElementById('viewerStatus');
 const needle = document.getElementById('needle');
 const headingEl = document.getElementById('heading');
 const altitudeEl = document.getElementById('altitude');
@@ -92,6 +93,147 @@ const canvas = document.getElementById('altGraph');
 const ctx = canvas.getContext('2d');
 const altHistory = [];
 let parseErrors = 0;
+const clock = new THREE.Clock();
+const deviceToSceneQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+const deviceToSceneInverse = deviceToSceneQuaternion.clone().invert();
+const targetModelQuaternion = new THREE.Quaternion();
+const droneRoot = new THREE.Group();
+const yawAxis = new THREE.Vector3(0, 0, 1);
+const pitchAxis = new THREE.Vector3(1, 0, 0);
+const rollAxis = new THREE.Vector3(0, 1, 0);
+const yawQuaternion = new THREE.Quaternion();
+const pitchQuaternion = new THREE.Quaternion();
+const rollQuaternion = new THREE.Quaternion();
+const eulerFallbackQuaternion = new THREE.Quaternion();
+const packetQuaternion = new THREE.Quaternion();
+let scene, camera, renderer;
+let animationMixer;
+let animationFrameId = 0;
+let viewerDisposed = false;
+targetModelQuaternion.identity();
+
+function initViewer() {
+  try {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    renderer = new THREE.WebGLRenderer({ canvas: modelCanvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    scene.add(droneRoot);
+    scene.add(new THREE.HemisphereLight(0xaad8ff, 0x101820, 2.4));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    keyLight.position.set(2, 3, 4);
+    scene.add(keyLight);
+    camera.position.set(0.55, 0.35, 1.35);
+    camera.lookAt(0, 0.12, 0);
+
+    const loader = new GLTFLoader();
+    loader.load(
+      './animated_drone.glb',
+      (gltf) => {
+        const model = gltf.scene;
+        const bounds = new THREE.Box3().setFromObject(model);
+        const center = bounds.getCenter(new THREE.Vector3());
+        const size = bounds.getSize(new THREE.Vector3());
+        const maxDimension = Math.max(size.x, size.y, size.z) || 1;
+
+        model.position.sub(center);
+        model.scale.setScalar(0.9 / maxDimension);
+        droneRoot.add(model);
+
+        if (gltf.animations.length) {
+          animationMixer = new THREE.AnimationMixer(model);
+          for (const clip of gltf.animations) {
+            animationMixer.clipAction(clip).play();
+          }
+        }
+
+        setViewerStatus('');
+      },
+      undefined,
+      (error) => {
+        console.error('Failed to load 3D model', error);
+        setViewerStatus('3D model failed to load');
+      }
+    );
+  } catch (error) {
+    console.error('Failed to initialize 3D viewer', error);
+    setViewerStatus('3D viewer unavailable');
+  }
+}
+
+function resizeViewer() {
+  if (!renderer || !camera) return;
+  const parent = modelCanvas.parentElement;
+  const width = modelCanvas.clientWidth || parent?.clientWidth || 0;
+  const height = modelCanvas.clientHeight || parent?.clientHeight || 0;
+  if (!width || !height) return;
+  renderer.setSize(width, height, false);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
+
+function setViewerStatus(text = '') {
+  viewerStatusEl.textContent = text;
+  viewerStatusEl.style.display = text ? 'block' : 'none';
+}
+
+function setAttitudeFromEulerDegrees(rollDeg, pitchDeg, yawDeg) {
+  if (![rollDeg, pitchDeg, yawDeg].every(Number.isFinite)) return false;
+  yawQuaternion.setFromAxisAngle(yawAxis, THREE.MathUtils.degToRad(yawDeg));
+  pitchQuaternion.setFromAxisAngle(pitchAxis, THREE.MathUtils.degToRad(pitchDeg));
+  rollQuaternion.setFromAxisAngle(rollAxis, THREE.MathUtils.degToRad(rollDeg));
+  // Preserve the original CSS fallback order: rotateZ(yaw) rotateX(pitch) rotateY(roll).
+  eulerFallbackQuaternion.copy(yawQuaternion).multiply(pitchQuaternion).multiply(rollQuaternion);
+  targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(eulerFallbackQuaternion).multiply(deviceToSceneInverse);
+  return true;
+}
+
+function setAttitudeFromPacket(data) {
+  const q = data.quaternion;
+  if (q && [q.w, q.x, q.y, q.z].every(Number.isFinite)) {
+    // Firmware quaternion uses aircraft/body axes; rotate that frame into the scene's Y-up view basis.
+    packetQuaternion.set(q.x, q.y, q.z, q.w).normalize();
+    targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(packetQuaternion).multiply(deviceToSceneInverse);
+    return true;
+  }
+  return setAttitudeFromEulerDegrees(data.roll, data.pitch, data.yaw);
+}
+
+function animate() {
+  if (viewerDisposed) return;
+  animationFrameId = requestAnimationFrame(animate);
+  resizeViewer();
+  const deltaSeconds = Math.min(clock.getDelta(), 0.25);
+  if (animationMixer) {
+    animationMixer.update(deltaSeconds);
+  }
+  const smoothing = 1 - Math.exp(-12 * deltaSeconds);
+  droneRoot.quaternion.slerp(targetModelQuaternion, smoothing);
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
+}
+
+function cleanupViewer() {
+  viewerDisposed = true;
+  window.removeEventListener('resize', resizeViewer);
+  window.removeEventListener('pagehide', cleanupViewer);
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+  }
+  if (renderer) {
+    renderer.dispose();
+    renderer = undefined;
+  }
+}
+
+window.addEventListener('resize', resizeViewer);
+window.addEventListener('pagehide', cleanupViewer);
+initViewer();
+resizeViewer();
+animate();
 
 function setIdleUi(isIdle) {
   idleState = isIdle;
@@ -106,6 +248,8 @@ function resetSessionUi() {
   drawAltitudeGraph();
   headingEl.textContent = '0.0';
   altitudeEl.textContent = '0.00';
+  targetModelQuaternion.identity();
+  droneRoot.quaternion.identity();
   telemetryText.textContent = 'Waiting for data...';
   deviceStatusEl.textContent = 'Device: disconnected';
 }
@@ -133,7 +277,7 @@ function updateUI(packet) {
 
   if (packet.type === 'ahrs') {
     const d = packet.data;
-    cube.style.transform = `rotateZ(${d.yaw}deg) rotateX(${d.pitch}deg) rotateY(${d.roll}deg)`;
+    setAttitudeFromPacket(d);
     needle.style.transform = `rotate(${d.heading}deg)`;
     headingEl.textContent = Number(d.heading).toFixed(1);
   }
