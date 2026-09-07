@@ -105,6 +105,7 @@ const yawQuaternion = new THREE.Quaternion();
 const pitchQuaternion = new THREE.Quaternion();
 const rollQuaternion = new THREE.Quaternion();
 const eulerFallbackQuaternion = new THREE.Quaternion();
+const packetQuaternion = new THREE.Quaternion();
 let scene, camera, renderer;
 let animationMixer;
 let animationFrameId = 0;
@@ -192,8 +193,8 @@ function setAttitudeFromPacket(data) {
   const q = data.quaternion;
   if (q && [q.w, q.x, q.y, q.z].every(Number.isFinite)) {
     // Firmware quaternion uses aircraft/body axes; rotate that frame into the scene's Y-up view basis.
-    const deviceQuaternion = new THREE.Quaternion(q.x, q.y, q.z, q.w).normalize();
-    targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(deviceQuaternion).multiply(deviceToSceneInverse);
+    packetQuaternion.set(q.x, q.y, q.z, q.w).normalize();
+    targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(packetQuaternion).multiply(deviceToSceneInverse);
     return true;
   }
   return setAttitudeFromEulerDegrees(data.roll, data.pitch, data.yaw);
