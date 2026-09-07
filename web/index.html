@@ -224,6 +224,7 @@ function resetSessionUi() {
   headingEl.textContent = '0.0';
   altitudeEl.textContent = '0.00';
   targetModelQuaternion.identity();
+  droneRoot.quaternion.identity();
   telemetryText.textContent = 'Waiting for data...';
   deviceStatusEl.textContent = 'Device: disconnected';
 }
