@@ -164,6 +164,9 @@ async function connect() {
     reader = undefined;
     writer = undefined;
     port = undefined;
+    idleState = false;
+    idleBtn.textContent = 'Enable Idle';
+    idleBtn.setAttribute('aria-pressed', 'false');
     decoder = undefined;
     pipeAbortController = undefined;
     pipePromise = undefined;

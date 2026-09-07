@@ -336,7 +336,8 @@ static bool readSensors(SensorSample& out) {
   uint8_t temperatureCount = 4;
   uint8_t pressureCount = 4;
   const int16_t dpsStatus = baro.getContResults(temperatureBuf, temperatureCount, pressureBuf, pressureCount);
-  if (dpsStatus >= 0 && temperatureCount > 0 && pressureCount > 0) {
+  const bool gotNewBaro = (dpsStatus > 0 && temperatureCount > 0 && pressureCount > 0);
+  if (gotNewBaro) {
     lastBaroTemperatureC = temperatureBuf[temperatureCount - 1];
     lastBaroPressurePa = pressureBuf[pressureCount - 1];
     hasBaroSample = true;
@@ -417,6 +418,8 @@ static void processSerialCommands() {
       } else if (serialLine == "DEBUG:0") {
         debugEnabled = false;
         printStatus("info", "Debug disabled");
+      } else if (!serialLine.isEmpty()) {
+        printStatus("warning", "Unknown command");
       }
       serialLine = "";
     } else if (serialLine.length() < 48) {
