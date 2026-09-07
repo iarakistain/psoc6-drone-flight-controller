@@ -10,6 +10,7 @@ static constexpr uint32_t LOOP_PERIOD_US = 10000; // 100 Hz
 static constexpr float SEA_LEVEL_PRESSURE_PA = 101325.0f;
 static constexpr float GYRO_DRIFT_ALERT_DPS = 1.5f;
 static constexpr uint32_t DRIFT_REPORT_INTERVAL_MS = 1000;
+static constexpr uint8_t MAX_CONSECUTIVE_READ_FAILURES = 25;
 static constexpr uint8_t BARO_PRESSURE_MEASUREMENT_RATE = 7; // 128 Hz (closest available >=100 Hz)
 static constexpr uint8_t BARO_PRESSURE_OVERSAMPLING_RATE = 1;// 2x oversampling for better precision
 static constexpr uint8_t BARO_TEMP_MEASUREMENT_RATE = 7;     // 128 Hz (closest available >=100 Hz)
@@ -168,6 +169,12 @@ const float MAG_SOFT_IRON[3][3] = {
     {-0.009f, 0.973f, 0.009f},
     {-0.005f, 0.009f, 1.056f}
 };
+// Remap matrix from magnetometer board frame to AHRS body frame (identity by default).
+const float MAG_AXIS_REMAP[3][3] = {
+    {1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 0.0f, 1.0f}
+};
 
 SensorSample sample {};
 Vec3 eulerDeg {};
@@ -183,6 +190,7 @@ Vec3 gyroBiasDps {0.0f, 0.0f, 0.0f};
 bool hasBaroSample = false;
 float lastBaroPressurePa = 0.0f;
 float lastBaroTemperatureC = 0.0f;
+uint8_t consecutiveReadFailures = 0;
 
 String serialLine;
 bool serialLineOverflow = false;
@@ -197,7 +205,12 @@ static Vec3 applyMagCalibration(const Vec3& raw) {
   calibrated.x = MAG_SOFT_IRON[0][0] * centered.x + MAG_SOFT_IRON[0][1] * centered.y + MAG_SOFT_IRON[0][2] * centered.z;
   calibrated.y = MAG_SOFT_IRON[1][0] * centered.x + MAG_SOFT_IRON[1][1] * centered.y + MAG_SOFT_IRON[1][2] * centered.z;
   calibrated.z = MAG_SOFT_IRON[2][0] * centered.x + MAG_SOFT_IRON[2][1] * centered.y + MAG_SOFT_IRON[2][2] * centered.z;
-  return calibrated;
+
+  Vec3 remapped;
+  remapped.x = MAG_AXIS_REMAP[0][0] * calibrated.x + MAG_AXIS_REMAP[0][1] * calibrated.y + MAG_AXIS_REMAP[0][2] * calibrated.z;
+  remapped.y = MAG_AXIS_REMAP[1][0] * calibrated.x + MAG_AXIS_REMAP[1][1] * calibrated.y + MAG_AXIS_REMAP[1][2] * calibrated.z;
+  remapped.z = MAG_AXIS_REMAP[2][0] * calibrated.x + MAG_AXIS_REMAP[2][1] * calibrated.y + MAG_AXIS_REMAP[2][2] * calibrated.z;
+  return remapped;
 }
 
 static float computeAltitudeMeters(float pressurePa) {
@@ -528,11 +541,18 @@ void loop() {
   }
 
   if (!readSensors(sample)) {
+    consecutiveReadFailures++;
     if (debugEnabled) {
       printStatus("warning", "Transient sensor read failure; sample skipped");
     }
+    if (consecutiveReadFailures >= MAX_CONSECUTIVE_READ_FAILURES) {
+      sensorHealthy = false;
+      consecutiveReadFailures = 0;
+      printStatus("error", "Persistent sensor failures, entering recovery mode");
+    }
     return;
   }
+  consecutiveReadFailures = 0;
 
   detectDrift(sample);
   const float dt = (nowUs - lastFusionUs) * 1e-6f;
