@@ -223,6 +223,20 @@ function unwrapAngleDegrees(previous, next) {
   return previous + delta;
 }
 
+function unwrapYawDegrees(next) {
+  let candidate = unwrapAngleDegrees(targetOrientation.yaw, next);
+  let renderedDelta = candidate - renderedOrientation.yaw;
+  while (renderedDelta > 180) {
+    candidate -= 360;
+    renderedDelta -= 360;
+  }
+  while (renderedDelta < -180) {
+    candidate += 360;
+    renderedDelta += 360;
+  }
+  return candidate;
+}
+
 function normalizeContinuousAngle(axis) {
   const anchor = Math.abs(targetOrientation[axis]) >= Math.abs(renderedOrientation[axis])
     ? targetOrientation[axis]
@@ -313,7 +327,7 @@ function updateUI(packet) {
       } else {
         targetOrientation.roll = roll;
         targetOrientation.pitch = pitch;
-        targetOrientation.yaw = unwrapAngleDegrees(renderedOrientation.yaw, yaw);
+        targetOrientation.yaw = unwrapYawDegrees(yaw);
         scheduleDroneAnimation();
       }
     }
