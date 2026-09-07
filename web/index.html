@@ -92,6 +92,12 @@ const ctx = canvas.getContext('2d');
 const altHistory = [];
 let parseErrors = 0;
 
+function setIdleUi(isIdle) {
+  idleState = isIdle;
+  idleBtn.textContent = idleState ? 'Disable Idle' : 'Enable Idle';
+  idleBtn.setAttribute('aria-pressed', idleState ? 'true' : 'false');
+}
+
 function drawAltitudeGraph() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (altHistory.length < 2) return;
@@ -133,6 +139,9 @@ function updateUI(packet) {
 
   if (packet.type === 'status') {
     deviceStatusEl.textContent = `Device: ${packet.data.level}: ${packet.data.message}`;
+    if (typeof packet.data.lowPowerIdle === 'boolean') {
+      setIdleUi(packet.data.lowPowerIdle);
+    }
   }
 }
 
@@ -164,9 +173,7 @@ async function connect() {
     reader = undefined;
     writer = undefined;
     port = undefined;
-    idleState = false;
-    idleBtn.textContent = 'Enable Idle';
-    idleBtn.setAttribute('aria-pressed', 'false');
+    setIdleUi(false);
     decoder = undefined;
     pipeAbortController = undefined;
     pipePromise = undefined;
@@ -216,12 +223,8 @@ async function disconnect() {
 
 async function toggleIdle() {
   if (!writer) return;
-  const nextIdleState = !idleState;
-  const cmd = nextIdleState ? 'IDLE:1\n' : 'IDLE:0\n';
+  const cmd = idleState ? 'IDLE:0\n' : 'IDLE:1\n';
   await writer.write(new TextEncoder().encode(cmd));
-  idleState = nextIdleState;
-  idleBtn.textContent = idleState ? 'Disable Idle' : 'Enable Idle';
-  idleBtn.setAttribute('aria-pressed', idleState ? 'true' : 'false');
 }
 
 document.getElementById('connectBtn').addEventListener('click', () => connect().catch(err => {
@@ -234,6 +237,7 @@ document.getElementById('disconnectBtn').addEventListener('click', () => disconn
 idleBtn.addEventListener('click', () => toggleIdle().catch(err => {
   statusEl.textContent = `Idle command error: ${err.message}`;
 }));
+setIdleUi(false);
 </script>
 </body>
 </html>
