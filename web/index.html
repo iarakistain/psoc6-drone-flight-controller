@@ -202,7 +202,10 @@ async function toggleIdle() {
   idleState = nextIdleState;
 }
 
-document.getElementById('connectBtn').onclick = () => connect().catch(err => statusEl.textContent = `Connect error: ${err.message}`);
+document.getElementById('connectBtn').onclick = () => connect().catch(err => {
+  statusEl.textContent = `Connect error: ${err.message}`;
+  deviceStatusEl.textContent = 'Device: disconnected';
+});
 document.getElementById('disconnectBtn').onclick = () => disconnect().catch(() => {});
 document.getElementById('idleBtn').onclick = () => toggleIdle().catch(() => {});
 </script>
