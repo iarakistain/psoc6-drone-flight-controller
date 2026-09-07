@@ -45,7 +45,7 @@
     <button id="connectBtn">Connect</button>
     <button id="disconnectBtn" disabled>Disconnect</button>
     <button id="idleBtn">Toggle Idle</button>
-    <span id="status">Disconnected</span>
+    <span id="status" role="status" aria-live="polite">Disconnected</span>
     <span id="deviceStatus" style="margin-left:12px;color:#9ad;">Device: waiting</span>
   </div>
 
@@ -183,6 +183,9 @@ async function disconnect() {
   try { if (pipePromise) await pipePromise; } catch (_) {}
   if (writer) writer.releaseLock();
   if (port) await port.close();
+  reader = undefined;
+  writer = undefined;
+  port = undefined;
   decoder = undefined;
   pipeAbortController = undefined;
   pipePromise = undefined;

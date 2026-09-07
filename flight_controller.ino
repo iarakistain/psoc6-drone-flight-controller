@@ -8,6 +8,8 @@
 static constexpr uint32_t SERIAL_BAUD = 115200;
 static constexpr uint32_t LOOP_PERIOD_US = 10000; // 100 Hz
 static constexpr float SEA_LEVEL_PRESSURE_PA = 101325.0f;
+static constexpr float GYRO_DRIFT_ALERT_DPS = 1.5f;
+static constexpr uint32_t DRIFT_REPORT_INTERVAL_MS = 1000;
 
 // Board sensors
 BMI270 imu;
@@ -224,11 +226,36 @@ static float headingFromYaw(float yawDeg) {
   return heading;
 }
 
+static void printJsonEscaped(const char* text) {
+  if (text == nullptr) {
+    return;
+  }
+  while (*text) {
+    const char c = *text++;
+    switch (c) {
+      case '\"': Serial.print("\\\""); break;
+      case '\\\\': Serial.print("\\\\"); break;
+      case '\b': Serial.print("\\b"); break;
+      case '\f': Serial.print("\\f"); break;
+      case '\n': Serial.print("\\n"); break;
+      case '\r': Serial.print("\\r"); break;
+      case '\t': Serial.print("\\t"); break;
+      default:
+        if (static_cast<uint8_t>(c) < 0x20) {
+          Serial.print('?');
+        } else {
+          Serial.print(c);
+        }
+        break;
+    }
+  }
+}
+
 static void printStatus(const char* level, const char* message) {
   Serial.print("{\"type\":\"status\",\"data\":{\"level\":\"");
-  Serial.print(level);
+  printJsonEscaped(level);
   Serial.print("\",\"message\":\"");
-  Serial.print(message);
+  printJsonEscaped(message);
   Serial.print("\",\"lowPowerIdle\":");
   Serial.print(lowPowerIdle ? "true" : "false");
   Serial.print("},\"timestamp\":");
@@ -255,7 +282,7 @@ static bool initializeSensors() {
   }
 
   baro.begin(Wire);
-  int16_t baroInit = baro.startMeasureBothCont(5, 2, 5, 2);
+  int16_t baroInit = baro.startMeasureBothCont(7, 0, 7, 0);
   if (baroInit != 0) {
     printStatus("error", "DPS368 continuous measurement init failed");
     return false;
@@ -317,7 +344,7 @@ static void detectDrift(const SensorSample& s) {
   }
 
   const float driftMag = sqrtf(gyroBiasDps.x * gyroBiasDps.x + gyroBiasDps.y * gyroBiasDps.y + gyroBiasDps.z * gyroBiasDps.z);
-  if (driftMag > 1.5f && millis() - lastDriftReportMs > 1000) {
+  if (driftMag > GYRO_DRIFT_ALERT_DPS && millis() - lastDriftReportMs > DRIFT_REPORT_INTERVAL_MS) {
     lastDriftReportMs = millis();
     printStatus("warning", "Gyro drift detected");
   }
