@@ -390,6 +390,7 @@ static bool setLowPowerIdle(bool enable) {
     }
   } else {
     hasBaroSample = false;
+    baro.begin(Wire);
     const int16_t ret = baro.startMeasureBothCont(
         BARO_PRESSURE_MEASUREMENT_RATE, BARO_PRESSURE_OVERSAMPLING_RATE,
         BARO_TEMP_MEASUREMENT_RATE, BARO_TEMP_OVERSAMPLING_RATE);

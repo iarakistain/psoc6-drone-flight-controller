@@ -7,7 +7,7 @@ AHRS Drone Flight Controller for CY8CKIT-062S2-AI with BMI270, BMM350, DPS368 se
 - `web/index.html` – WebSerial visualizer (3D attitude, compass, altitude graph, telemetry).
 
 ## Arduino libraries
-Install from Library Manager:
+Install from Library Manager (tested with the versions below):
 - `SparkFun BMI270 Arduino Library` by SparkFun, version `1.0.3` (header: `SparkFun_BMI270_Arduino_Library.h`)
 - `BMM350` by Matteo Cancian, version `1.3.0` (header: `BMM350.h`). If not visible in Library Manager, install manually from `https://github.com/CancianMatteo/BMM350-Magnetometer` as ZIP.
 - `XENSIV Digital Pressure Sensor` by Infineon, version `1.0.3` (header: `Dps3xx.h`)
