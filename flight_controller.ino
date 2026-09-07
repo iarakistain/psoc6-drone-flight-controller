@@ -10,6 +10,8 @@ static constexpr uint32_t LOOP_PERIOD_US = 10000; // 100 Hz
 static constexpr float SEA_LEVEL_PRESSURE_PA = 101325.0f;
 static constexpr float GYRO_DRIFT_ALERT_DPS = 1.5f;
 static constexpr uint32_t DRIFT_REPORT_INTERVAL_MS = 1000;
+static constexpr uint8_t BARO_MEASUREMENT_RATE = 7;    // 128 Hz (closest available >=100 Hz)
+static constexpr uint8_t BARO_OVERSAMPLING_RATE = 1;   // 2x oversampling for better precision
 
 // Board sensors
 BMI270 imu;
@@ -290,7 +292,9 @@ static bool initializeSensors() {
     printStatus("error", "DPS368 did not respond with a valid product ID");
     return false;
   }
-  int16_t baroInit = baro.startMeasureBothCont(7, 0, 7, 0);
+  int16_t baroInit = baro.startMeasureBothCont(
+      BARO_MEASUREMENT_RATE, BARO_OVERSAMPLING_RATE,
+      BARO_MEASUREMENT_RATE, BARO_OVERSAMPLING_RATE);
   if (baroInit != 0) {
     printStatus("error", "DPS368 continuous measurement init failed");
     return false;
@@ -361,7 +365,9 @@ static bool setLowPowerIdle(bool enable) {
     }
   } else {
     hasBaroSample = false;
-    const int16_t ret = baro.startMeasureBothCont(7, 0, 7, 0);
+    const int16_t ret = baro.startMeasureBothCont(
+        BARO_MEASUREMENT_RATE, BARO_OVERSAMPLING_RATE,
+        BARO_MEASUREMENT_RATE, BARO_OVERSAMPLING_RATE);
     if (ret != 0) {
       success = false;
     }

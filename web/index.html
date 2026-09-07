@@ -209,8 +209,12 @@ document.getElementById('connectBtn').addEventListener('click', () => connect().
   statusEl.textContent = `Connect error: ${err.message}`;
   deviceStatusEl.textContent = 'Device: disconnected';
 }));
-document.getElementById('disconnectBtn').addEventListener('click', () => disconnect().catch(() => {}));
-idleBtn.addEventListener('click', () => toggleIdle().catch(() => {}));
+document.getElementById('disconnectBtn').addEventListener('click', () => disconnect().catch(err => {
+  statusEl.textContent = `Disconnect error: ${err.message}`;
+}));
+idleBtn.addEventListener('click', () => toggleIdle().catch(err => {
+  statusEl.textContent = `Idle command error: ${err.message}`;
+}));
 </script>
 </body>
 </html>
