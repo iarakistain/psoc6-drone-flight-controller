@@ -274,17 +274,10 @@ function scheduleDroneAnimation() {
 function animateDrone() {
   droneAnimationFrame = 0;
   const smoothing = 0.22;
-  renderedOrientation.roll += (targetOrientation.roll - renderedOrientation.roll) * smoothing;
-  renderedOrientation.pitch += (targetOrientation.pitch - renderedOrientation.pitch) * smoothing;
   renderedOrientation.yaw += (targetOrientation.yaw - renderedOrientation.yaw) * smoothing;
   normalizeContinuousAngle('yaw');
-  const isSettled =
-    Math.abs(targetOrientation.roll - renderedOrientation.roll) < 0.01 &&
-    Math.abs(targetOrientation.pitch - renderedOrientation.pitch) < 0.01 &&
-    Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01;
+  const isSettled = Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01;
   if (isSettled) {
-    renderedOrientation.roll = targetOrientation.roll;
-    renderedOrientation.pitch = targetOrientation.pitch;
     renderedOrientation.yaw = targetOrientation.yaw;
   }
   updateDroneTransform();
@@ -332,10 +325,18 @@ function updateUI(packet) {
         updateDroneTransform();
         attitudeStateEl.textContent = 'Receiving AHRS updates';
       } else {
+        renderedOrientation.roll = roll;
         targetOrientation.roll = roll;
+        renderedOrientation.pitch = pitch;
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = unwrapYawDegrees(yaw);
-        scheduleDroneAnimation();
+        if (Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01) {
+          renderedOrientation.yaw = targetOrientation.yaw;
+          updateDroneTransform();
+        } else {
+          updateDroneTransform();
+          scheduleDroneAnimation();
+        }
       }
     }
     if (Number.isFinite(heading)) {
