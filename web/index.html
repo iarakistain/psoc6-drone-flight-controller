@@ -285,12 +285,12 @@ function slerpQuaternion(from, to, t) {
   const sinTheta = Math.sin(theta);
   const scaleFrom = Math.cos(theta) - dot * sinTheta / sinTheta0;
   const scaleTo = sinTheta / sinTheta0;
-  return {
+  return normalizeQuaternion({
     w: from.w * scaleFrom + end.w * scaleTo,
     x: from.x * scaleFrom + end.x * scaleTo,
     y: from.y * scaleFrom + end.y * scaleTo,
     z: from.z * scaleFrom + end.z * scaleTo,
-  };
+  });
 }
 
 function quaternionToAxisAngle(q) {
