@@ -171,10 +171,10 @@ function setViewerStatus(text = '') {
 function setAttitudeFromEulerDegrees(rollDeg, pitchDeg, yawDeg) {
   if (![rollDeg, pitchDeg, yawDeg].every(Number.isFinite)) return false;
   const deviceQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(
-    THREE.MathUtils.degToRad(rollDeg),
     THREE.MathUtils.degToRad(pitchDeg),
+    THREE.MathUtils.degToRad(rollDeg),
     THREE.MathUtils.degToRad(yawDeg),
-    'XYZ'
+    'ZXY'
   ));
   targetModelQuaternion.copy(deviceToSceneQuaternion).multiply(deviceQuaternion).multiply(deviceToSceneInverse);
   return true;
