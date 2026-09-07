@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PSoC6 AHRS WebSerial Visualizer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; background: #111; color: #eee; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 12px; }
+    #telemetry { min-width: 320px; }
+    #cubeWrap { perspective: 600px; width: 220px; height: 220px; }
+    #cube {
+      width: 140px; height: 140px; margin: 36px auto;
+      transform-style: preserve-3d;
+      transition: transform 0.05s linear;
+    }
+    .face {
+      position: absolute; width: 140px; height: 140px; border: 1px solid #5af;
+      background: rgba(40,120,255,0.15); line-height: 140px; text-align: center;
+    }
+    .f1 { transform: rotateY(0deg) translateZ(70px); }
+    .f2 { transform: rotateY(180deg) translateZ(70px); }
+    .f3 { transform: rotateY(90deg) translateZ(70px); }
+    .f4 { transform: rotateY(-90deg) translateZ(70px); }
+    .f5 { transform: rotateX(90deg) translateZ(70px); }
+    .f6 { transform: rotateX(-90deg) translateZ(70px); }
+    #compass {
+      width: 160px; height: 160px; border: 2px solid #555; border-radius: 50%;
+      position: relative; margin: 8px auto;
+    }
+    #needle {
+      width: 2px; height: 70px; background: #f55;
+      position: absolute; left: 79px; top: 10px;
+      transform-origin: 50% 100%;
+    }
+    #altGraph { background: #000; border: 1px solid #444; }
+    pre { margin: 0; white-space: pre-wrap; }
+    button { margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <h2>PSoC6 Drone AHRS Visualizer (WebSerial)</h2>
+  <div class="card">
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+    <button id="idleBtn">Toggle Idle</button>
+    <span id="status">Disconnected</span>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <div class="card" id="cubeWrap">
+      <div id="cube">
+        <div class="face f1">Front</div><div class="face f2">Back</div>
+        <div class="face f3">Right</div><div class="face f4">Left</div>
+        <div class="face f5">Top</div><div class="face f6">Bottom</div>
+      </div>
+    </div>
+
+    <div class="card" style="min-width:190px;">
+      <h4 style="margin:4px 0">Compass</h4>
+      <div id="compass"><div id="needle"></div></div>
+      <div>Heading: <span id="heading">0.0</span>°</div>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:4px 0">Altitude</h4>
+      <canvas id="altGraph" width="360" height="160"></canvas>
+      <div>Current: <span id="altitude">0.00</span> m</div>
+    </div>
+
+    <div class="card" id="telemetry">
+      <h4 style="margin:4px 0">Telemetry</h4>
+      <pre id="telemetryText">Waiting for data...</pre>
+    </div>
+  </div>
+
+<script>
+let port, reader, writer, keepReading = false, idleState = false;
+const statusEl = document.getElementById('status');
+const cube = document.getElementById('cube');
+const needle = document.getElementById('needle');
+const headingEl = document.getElementById('heading');
+const altitudeEl = document.getElementById('altitude');
+const telemetryText = document.getElementById('telemetryText');
+const canvas = document.getElementById('altGraph');
+const ctx = canvas.getContext('2d');
+const altHistory = [];
+
+function drawAltitudeGraph() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (altHistory.length < 2) return;
+
+  const minAlt = Math.min(...altHistory);
+  const maxAlt = Math.max(...altHistory);
+  const range = Math.max(0.5, maxAlt - minAlt);
+
+  ctx.strokeStyle = '#4af';
+  ctx.beginPath();
+  for (let i = 0; i < altHistory.length; i++) {
+    const x = (i / (altHistory.length - 1)) * canvas.width;
+    const y = canvas.height - ((altHistory[i] - minAlt) / range) * canvas.height;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function updateUI(packet) {
+  if (packet.type === 'ahrs') {
+    const d = packet.data;
+    cube.style.transform = `rotateZ(${d.yaw}deg) rotateX(${d.pitch}deg) rotateY(${d.roll}deg)`;
+    needle.style.transform = `rotate(${d.heading}deg)`;
+    headingEl.textContent = Number(d.heading).toFixed(1);
+  }
+
+  if (packet.type === 'sensor') {
+    const d = packet.data;
+    altitudeEl.textContent = Number(d.baro.altitudeM).toFixed(2);
+    altHistory.push(Number(d.baro.altitudeM));
+    if (altHistory.length > 240) altHistory.shift();
+    drawAltitudeGraph();
+
+    telemetryText.textContent = JSON.stringify(packet, null, 2);
+  }
+
+  if (packet.type === 'status') {
+    statusEl.textContent = `${packet.data.level}: ${packet.data.message}`;
+  }
+}
+
+async function connect() {
+  if (!('serial' in navigator)) {
+    alert('WebSerial is not supported in this browser.');
+    return;
+  }
+
+  port = await navigator.serial.requestPort();
+  await port.open({ baudRate: 115200 });
+  writer = port.writable.getWriter();
+  keepReading = true;
+  statusEl.textContent = 'Connected';
+  document.getElementById('connectBtn').disabled = true;
+  document.getElementById('disconnectBtn').disabled = false;
+
+  const decoder = new TextDecoderStream();
+  port.readable.pipeTo(decoder.writable);
+  reader = decoder.readable.getReader();
+
+  let buffer = '';
+  while (keepReading) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line) continue;
+      try {
+        const packet = JSON.parse(line);
+        updateUI(packet);
+      } catch (_) {}
+    }
+  }
+}
+
+async function disconnect() {
+  keepReading = false;
+  try { if (reader) await reader.cancel(); } catch (_) {}
+  if (writer) writer.releaseLock();
+  if (port) await port.close();
+  statusEl.textContent = 'Disconnected';
+  document.getElementById('connectBtn').disabled = false;
+  document.getElementById('disconnectBtn').disabled = true;
+}
+
+async function toggleIdle() {
+  if (!writer) return;
+  idleState = !idleState;
+  const cmd = idleState ? 'IDLE:1\n' : 'IDLE:0\n';
+  await writer.write(new TextEncoder().encode(cmd));
+}
+
+document.getElementById('connectBtn').onclick = () => connect().catch(err => statusEl.textContent = `Connect error: ${err.message}`);
+document.getElementById('disconnectBtn').onclick = () => disconnect().catch(() => {});
+document.getElementById('idleBtn').onclick = () => toggleIdle().catch(() => {});
+</script>
+</body>
+</html>
