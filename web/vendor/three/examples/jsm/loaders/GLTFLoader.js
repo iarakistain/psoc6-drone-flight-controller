@@ -4858,9 +4858,9 @@ function addPrimitiveAttributes( geometry, primitiveDef, parser ) {
 
 	assignExtrasToUserData( geometry, primitiveDef );
 
-	computeBounds( geometry, primitiveDef, parser );
-
 	return Promise.all( pending ).then( function () {
+
+		computeBounds( geometry, primitiveDef, parser );
 
 		return primitiveDef.targets !== undefined
 			? addMorphTargets( geometry, primitiveDef.targets, parser )
