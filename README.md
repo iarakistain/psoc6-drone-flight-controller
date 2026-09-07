@@ -4,7 +4,7 @@ AHRS Drone Flight Controller for CY8CKIT-062S2-AI with BMI270, BMM350, DPS368 se
 
 ## Files
 - `flight_controller.ino` – complete flight controller sketch (100Hz sensor+AHRS JSON stream).
-- `web/index.html` – WebSerial visualizer (3D attitude, compass, altitude graph, telemetry).
+- `web/index.html` – WebSerial visualizer (3D drone attitude, compass, altitude graph, telemetry).
 
 ## Arduino libraries
 Install from Library Manager (tested with the versions below):
@@ -22,6 +22,8 @@ Each line is a JSON object:
 - `{"type":"status","data":{...},"timestamp":ms}`
 
 `sensor.data.baro` includes both `altitudeM` (standard pressure altitude) and `compensatedAltitudeM` (temperature-compensated altitude).
+
+`ahrs.data` includes `roll`, `pitch`, `yaw`, and `heading` in degrees plus a `quaternion`. The WebSerial visualizer maps those Euler angles as `rotateZ(yaw) rotateX(-pitch) rotateY(-roll)` so positive pitch stays nose-up and positive roll stays right-wing-down in the browser scene.
 
 ## Runtime commands
 Send over serial:
