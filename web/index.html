@@ -182,6 +182,7 @@ const ctx = canvas.getContext('2d');
 const altHistory = [];
 let parseErrors = 0;
 let hasAhrsPacket = false;
+let droneAnimationFrame = 0;
 const renderedOrientation = { roll: 0, pitch: 0, yaw: 0 };
 const targetOrientation = { roll: 0, pitch: 0, yaw: 0 };
 
@@ -196,6 +197,10 @@ function resetSessionUi() {
   parseErrors = 0;
   altHistory.length = 0;
   drawAltitudeGraph();
+  if (droneAnimationFrame) {
+    cancelAnimationFrame(droneAnimationFrame);
+    droneAnimationFrame = 0;
+  }
   hasAhrsPacket = false;
   renderedOrientation.roll = 0;
   renderedOrientation.pitch = 0;
@@ -244,15 +249,33 @@ function updateDroneTransform() {
     `rotateZ(${renderedOrientation.yaw}deg) rotateY(${-renderedOrientation.pitch}deg) rotateX(${-renderedOrientation.roll}deg)`;
 }
 
+function scheduleDroneAnimation() {
+  if (!droneAnimationFrame) {
+    droneAnimationFrame = requestAnimationFrame(animateDrone);
+  }
+}
+
 function animateDrone() {
+  droneAnimationFrame = 0;
   const smoothing = 0.22;
   renderedOrientation.roll += (targetOrientation.roll - renderedOrientation.roll) * smoothing;
   renderedOrientation.pitch += (targetOrientation.pitch - renderedOrientation.pitch) * smoothing;
   renderedOrientation.yaw += (targetOrientation.yaw - renderedOrientation.yaw) * smoothing;
   normalizeContinuousAngle('roll');
   normalizeContinuousAngle('yaw');
+  const isSettled =
+    Math.abs(targetOrientation.roll - renderedOrientation.roll) < 0.01 &&
+    Math.abs(targetOrientation.pitch - renderedOrientation.pitch) < 0.01 &&
+    Math.abs(targetOrientation.yaw - renderedOrientation.yaw) < 0.01;
+  if (isSettled) {
+    renderedOrientation.roll = targetOrientation.roll;
+    renderedOrientation.pitch = targetOrientation.pitch;
+    renderedOrientation.yaw = targetOrientation.yaw;
+  }
   updateDroneTransform();
-  requestAnimationFrame(animateDrone);
+  if (!isSettled) {
+    scheduleDroneAnimation();
+  }
 }
 
 function drawAltitudeGraph() {
@@ -295,6 +318,7 @@ function updateUI(packet) {
         targetOrientation.roll = unwrapAngleDegrees(targetOrientation.roll, roll);
         targetOrientation.pitch = pitch;
         targetOrientation.yaw = unwrapAngleDegrees(targetOrientation.yaw, yaw);
+        scheduleDroneAnimation();
       }
       attitudeStateEl.textContent = 'Live AHRS attitude (roll about X, pitch about Y, yaw about Z)';
     }
@@ -424,7 +448,6 @@ document.getElementById('disconnectBtn').addEventListener('click', () => disconn
 idleBtn.addEventListener('click', () => toggleIdle().catch(err => {
   statusEl.textContent = `Idle command error: ${err.message}`;
 }));
-requestAnimationFrame(animateDrone);
 resetSessionUi();
 </script>
 </body>
