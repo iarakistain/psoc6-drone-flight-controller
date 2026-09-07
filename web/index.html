@@ -212,6 +212,7 @@ function resetSessionUi() {
   setQuaternion(renderedOrientation, { w: 1, x: 0, y: 0, z: 0 });
   setQuaternion(targetOrientation, { w: 1, x: 0, y: 0, z: 0 });
   updateDroneTransform();
+  drone.setAttribute('aria-label', '3D drone attitude model awaiting AHRS data');
   headingEl.textContent = '0.0';
   altitudeEl.textContent = '0.00';
   telemetryText.textContent = 'Waiting for data...';
@@ -312,6 +313,10 @@ function quaternionToAxisAngle(q) {
   };
 }
 
+function formatAhrsLabel(roll, pitch, yaw) {
+  return `3D drone attitude model: roll ${roll.toFixed(1)} degrees, pitch ${pitch.toFixed(1)} degrees, yaw ${yaw.toFixed(1)} degrees`;
+}
+
 function updateDroneTransform() {
   // The drone graphic is drawn nose-right so body +X maps to CSS +X and body +Y maps to CSS +Y.
   // AHRS Euler input is converted to a quaternion using the same browser-side mapping as
@@ -368,6 +373,7 @@ function updateUI(packet) {
     const yaw = Number(d.yaw);
     const heading = Number(d.heading);
     if (Number.isFinite(roll) && Number.isFinite(pitch) && Number.isFinite(yaw)) {
+      drone.setAttribute('aria-label', formatAhrsLabel(roll, pitch, yaw));
       const nextOrientation = quaternionFromAhrsEuler(roll, pitch, yaw);
       if (!hasAhrsPacket) {
         hasAhrsPacket = true;
